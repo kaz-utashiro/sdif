@@ -8,7 +8,7 @@
 ;# Software Research Associates, Inc., Japan
 ;#
 ;# Original version on Jul 24 1991
-;; $rcsid = '$Id: sdif,v 1.11 1992/05/01 22:47:30 utashiro Exp $';#'
+;; $rcsid = '$Id: sdif,v 1.12 1992/09/07 07:56:12 utashiro Exp $';#'
 ;#
 ;# Incompatibility:
 ;#	- has -n option for numbering
@@ -33,7 +33,7 @@ Options:
 	-s	don't print identical line
 	-f	fold line instead of truncating
 		(folded line is marked by '+' character)
-	-c	do context diff
+	-c[#]	do context diff
 	-b	ignore trailing blanks
 	-i	ignore the case of letters
 	-w	ignore all blanks
@@ -46,7 +46,7 @@ Options:
 	-q	don't print rcs diagnostics
 _
 
-$opts = 'nlsfhqdxm'.'cbiwu';
+$opts = 'nlsfhqdxm'.'cbiwuB';
 while ($_ = $ARGV[0], /^-/ && shift) {
     next unless ($car, $cdr) = /^-?(.)(.*)/;
     if (/-rcs$/) { $rcs++; next; }
@@ -62,6 +62,10 @@ while ($_ = $ARGV[0], /^-/ && shift) {
 	if ($cdr =~ /^\d+$/) { $screen_width = $cdr; next; }
 	if ($ARGV[$[] =~ /^\d+$/) { $screen_width = shift; next; }
     }
+    if (s/^-?([cu]\d+)//) {
+	push(@diffopts, "-$1"); eval "\$opt_$car++"; redo;
+    }
+    push(@diffopts, "-$car") if index("cbiwuB", $car) >= $[;
     if (index($opts, "$car:") >= $[) {
 	eval "\$opt_$car = length(\$cdr) ? \$cdr : \@ARGV ? shift : &usage";
 	next;
@@ -73,18 +77,17 @@ while ($_ = $ARGV[0], /^-/ && shift) {
 }
 
 push(@rcsopts, '-q') if $opt_q;
-grep(eval "\$diffopts .= '-$_ ' if \$opt_$_", 'c', 'b', 'i', 'w', 'u');
 $diff = $rcs ? 'rcsdiff' : 'diff' unless $diff;
 $diff .= ' -rcs' if $rcs && $diff eq 'cdif';
 
 if ($rcs) {
     $rcsfile = shift || &usage("No RCS filename\n\n");
-    $DIFF = "$diff $diffopts @rcsopts @rcs $rcsfile |";
+    $DIFF = "$diff @diffopts @rcsopts @rcs $rcsfile |";
     $OLD = "co @rcsopts -p " . $rcs[0] . " $rcsfile|";
     $NEW = @rcs > 1 ? "co @rcsopts -p " . $rcs[1] . " $rcsfile|" : $rcsfile;
 } elsif (@ARGV == 2) {
     ($OLD, $NEW) = @ARGV;
-    $DIFF = "$diff $diffopts $OLD $NEW |";
+    $DIFF = "$diff @diffopts $OLD $NEW |";
 } elsif (@ARGV < 2) {
     $DIFF = shift || '-';
     $opt_s++;
@@ -154,7 +157,7 @@ DIFF: while (<DIFF>) {
 	&out($_, ' ', scalar(<DIFF>), 1);
 	$markwidth = 2;
     }
-    elsif ($_ eq "***************\n") {
+    elsif ($cdif = ($_ eq "***************\n")) {
 	&out($_, ' ', $_, 1);
 	$ohead = $_ = <DIFF>;
 	print, next unless ($left) = /^\*\*\* ([\d,]+) \*\*\*\*$/;
@@ -171,7 +174,7 @@ DIFF: while (<DIFF>) {
 	}
 	&out($ohead, ' ', $nhead, 1) unless $opt_n;
 	($oline, $nline) = ($left, $right);
-	&flush();
+	&flush;
 	redo if $redo;
     }
     #
@@ -198,21 +201,26 @@ DIFF: while (<DIFF>) {
 	warn "Unrecognizable line -- $_";
     }
 }
+close(DIFF);
+$exit = $? >> 8;
 if ($readfile) {
-    &print_identical(-1);
+    &print_identical(-1) if $exit < 2;
     close(OLD);
     close(NEW);
 }
-close(DIFF);
-exit (($? >> 8) == 2);
+exit($exit == 2);
 
 ######################################################################
 
 sub flush {
     while (@old || @new) {
 	$old = $new = undef;
-	$old = shift(@old) if $old[0] =~ /^[\-\!\<]/;
-	$new = shift(@new) if $new[0] =~ /^[\+\!\>]/;
+	if    ($cdif && $old[0] =~ /^\-/) { $old = shift(@old); }
+	elsif ($cdif && $new[0] =~ /^\+/) { $new = shift(@new); }
+	else {
+	    $old = shift(@old) if $old[0] =~ /^[\-\!\<]/;
+	    $new = shift(@new) if $new[0] =~ /^[\+\!\>]/;
+	}
 	if ($old || $new) {
 	    $mark = $old ? $new ? '|' : '<' : '>';
 	} else {
@@ -365,7 +373,7 @@ sub min { $_[ ($_[$[] > $_[$[+1]) + $[ ]; }
 .de XX
 .ds XX \\$4\ (v\\$3)
 ..
-.XX $Id: sdif,v 1.11 1992/05/01 22:47:30 utashiro Exp $
+.XX $Id: sdif,v 1.12 1992/09/07 07:56:12 utashiro Exp $
 .TH SDIF 1 \*(XX
 .SH NAME
 sdif \- sdiff clone
@@ -394,6 +402,8 @@ included in left file is indicated by `<' mark, and `>' is
 used to lines only in right file.  Modified line has a mark
 `|'.  Example output from sdif is like this:
 .nf
+.cs R 25
+.ft CW
 
 	1    deleted       <
 	2    same             1    same
@@ -401,6 +411,8 @@ used to lines only in right file.  Modified line has a mark
 	4    same             3    same
 	                   >  4    added
 
+.ft R
+.cs R
 .fi
 .PP
 .I Sdif
