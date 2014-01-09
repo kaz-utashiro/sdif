@@ -4,11 +4,17 @@
 ;#
 ;# sdif: sdiff clone
 ;#
-;# Copyright (c) 1992 Kazumasa Utashiro <utashiro@sra.co.jp>
-;# Software Research Associates, Inc., Japan
+;# Copyright (c) 1992-1994 Kazumasa Utashiro <utashiro@iij.ad.jp>
+;# Internet Initiative Japan Inc.
+;# Sanbancho Annex Bldg. 1-4, Sanban-cho, Chiyoda-ku, Tokyo 102, Japan
 ;#
 ;# Original version on Jul 24 1991
-;; $rcsid = q$Id: sdif,v 1.14 1992/12/11 01:27:56 utashiro Exp $;
+;; $rcsid = q$Id: sdif,v 1.15 1994/11/08 08:51:34 utashiro Exp $;
+;#
+;# Redistribution for non-commercial purpose, with or without
+;# modification, is granted as long as all copyright notices are
+;# retained.  THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND
+;# ANY EXPRESS OR IMPLIED WARRANTIES ARE DISCLAIMED.
 ;#
 ;# Incompatibility:
 ;#	- has -n option for numbering
@@ -16,7 +22,7 @@
 ;#	- has -F option for word boundary folding
 ;#	- has -c option for context diff
 ;#	- has -m option to keep diff mark
-;#	- handle backspace and caridge return
+;#	- handle backspace and carriage return
 ;#	- no -o option
 ;#	- all tabs are expanded
 ;#	- default width is 80
@@ -24,10 +30,10 @@
 ;#	- cdif (word context diff) support
 ;#	- read diff data from file or stdin
 ;#
-$myname = ('sdif', split('/', $0));
+$sdif = ('sdif', split('/', $0));
 $usage = <<_;
-Usage: $myname [-n] [-l] [-s] [-[fF]] [-b] [-i] [-w] [-w #] [-c] [file1 [file2]]
-       $myname [-rcs] [-q] [-rrev1 [-rrev2]] [$myname options] file
+Usage: $sdif [-n] [-l] [-s] [-[fF]] [-b] [-i] [-w] [-w #] [-c] [file1 [file2]]
+       $sdif [-rcs] [-q] [-rrev1 [-rrev2]] [$sdif options] file
 Options:
 	-n	print line number
 	-l	print left column only for identical line
@@ -46,9 +52,15 @@ Options:
 		(not required when revision number is supplied)
 	-rrev	RCS revision number
 	-q	don't print rcs diagnostics
+	-1	print old file only
+	-2	print new file only
 _
 
-$opts = 'nlsfhqdxmF'.'cbiwuB';
+if ($ENV{'SDIFOPTS'}) {
+    require('shellwords.pl');
+    unshift(@ARGV, &shellwords($ENV{'SDIFOPTS'}));
+};
+$opts = 'nlsfhqdxmF12'.'cbiwuB';
 while ($_ = $ARGV[0], /^-/ && shift) {
     next unless ($car, $cdr) = /^-?(.)(.*)/;
     if (/-rcs$/) { $rcs++; next; }
@@ -201,7 +213,7 @@ DIFF: while (<DIFF>) {
 	&flush;
     }
     else {
-	warn "Unrecognizable line -- $_";
+	print;
     }
 }
 close(DIFF);
@@ -259,6 +271,11 @@ sub print_identical {
 
 sub out {
     local($old, $mark, $new, $noline) = @_;
+    if ($opt_1) {
+	print $old if defined($old); return;
+    } elsif ($opt_2) {
+	print $new if defined($new); return;
+    }
     local($o, $n);
     local($ocont, $ncont, $contmark) = (' ', ' ', '+');
     if (defined($old)) {
@@ -289,11 +306,11 @@ sub fold {
     local($l, $room) = ('', $width);
     local($n, $c, $r, $mb);
     while (length) {
-	if (s/^\010//) {
+	if (s/^\cH//) {
 	    $room < $width && $room++; $c = $&; next;
 	}
 	if (s/^\r//) {
-	    $c = "\010" x ($width - $room - $opt_n * 5);
+	    $c = "\cH" x ($width - $room - $opt_n * 5);
 	    $room = $width - $opt_n * 5;
 	    next;
 	}
@@ -304,7 +321,7 @@ sub fold {
 	    $room -= length($c);
 	    $_ = $r . $_;
 	} else {
-	    die "$myname: panic";
+	    die "$sdif: panic";
 	}
     } continue {
 	$l .= $c;
@@ -313,7 +330,7 @@ sub fold {
 	$cut = $2;
 	if ($l =~ /[\200-\377]$/) { # This check is not necessary for EUC
 	    local(@tmp) = $l =~ /[\200-\377]?./g;
-	    pop(@tmp) =~ /^[\200-\377]$/ && $cut =~ s/^.// && $l .= $&;
+	    pop(@tmp) =~ /^[\200-\377]$/ && ($cut =~ s/^.//) && ($l .= $&);
 	}
 	$_ = $cut . $_;
 	$room += &pwidth($cut) if $pad;
@@ -384,7 +401,7 @@ sub min { $_[ ($_[$[] > $_[$[+1]) + $[ ]; }
 .de XX
 .ds XX \\$4\ (v\\$3)
 ..
-.XX $Id: sdif,v 1.14 1992/12/11 01:27:56 utashiro Exp $
+.XX $Id: sdif,v 1.15 1994/11/08 08:51:34 utashiro Exp $
 .TH SDIF 1 \*(XX
 .SH NAME
 sdif \- sdiff clone
@@ -395,7 +412,7 @@ sdif \- sdiff clone
 .ti -\n(wwu
 \fBsdif\fP	\c
 [\-n] [\-l] [\-s] [\-[fF]] [\-b] [\-i] [\-w] [\-w \fIwidth\fP]
-[\-c] [file1 [file2]]
+[\-c[\fIline\fP]] [\-diff=\fIcommand\fP] [file1 [file2]]
 .br
 .ti -\n(wwu
 \fBsdif\fP	\c
@@ -437,7 +454,7 @@ tabs to spaces.  Other incompatibilities are:
 	\(bu context diff support
 	\(bu unified diff support
 	\(bu option to keep diff mark
-	\(bu handle backspace and caridge return
+	\(bu handle backspace and carriage return
 	\(bu default width is 80
 	\(bu rcs support
 	\(bu cdif (word context diff) support
@@ -465,7 +482,7 @@ continue mark is printed when numbering option is on.
 .IP \-F
 Fold longs line at word boundaries.
 .IP \-m
-Usually diff mark from diff output are trimed off.  This
+Usually diff mark from diff output are trimmed off.  This
 option forces to leave them on output listing.  I prefer to
 use this option with \-c.
 .IP "\-rcs, \-r\fIrev\fP"
@@ -476,8 +493,21 @@ Use \fIcdif\fP command instead of normal diff command.
 .IP "\-b, \-w, \-c, \-u, \-B"
 Passed through to the back-end diff command.  \fISdif\fP can
 process the output from context diff (\-c) and unified diff
-(\-u) if those are available.  Option \-B is valid only for
-\fIcdif\fP.
+(\-u) if those are available.  These are sometimes useful
+because you can get only modified part of text.  Option \-B
+is valid only for \fIcdif\fP.
+.IP ""
+If you want to pass a option not listed here, please use
+\-diff="cdif ..." option.
+.IP "\-diff=\fIcommand\fP"
+Any command can be specified as a diff command to be used.
+However piping output to sdif is usually easier unless you
+want to get whole text.
+.IP "\-1, \-2"
+Only old file is printed when option \-1 is supplied and
+only new file with \-2 option.  These are almost useless
+with normal diff because ``sdif -1 A B'' is equivalent to
+``cat A'', but probably make some sense with \-cdif option.
 .SH RELATED COMMANDS
 .IP a2ps
 is a command which converts ascii text to postscript
@@ -502,7 +532,7 @@ Next is a example that I'm using often.
 .PP
 All of these programs can be ftp'ed from sra.co.jp
 (133.137.4.3) by anonymous ftp from the directory
-~ftp/pub/lang/perl/sra-scripts.
+pub/lang/perl/sra-scripts.
 .SH AUTHOR
 Kazumasa Utashiro <utashiro@sra.co.jp>
 .br
