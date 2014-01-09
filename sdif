@@ -3,7 +3,7 @@
 ;# sdif: sdiff clone
 ;# by K. Utashiro <utashiro@sra.co.jp>
 ;# Original version on Jul 24 1991
-;$rcsid = '$Id: sdif,v 1.6 1991/07/29 16:37:35 utashiro Exp $';
+;$rcsid = '$Id: sdif,v 1.7 1991/07/31 20:43:10 utashiro Exp $';
 ;#
 ;# Incompatibility:
 ;#	- has -n option
@@ -96,6 +96,7 @@ open(DIFF, $diffcmd) || die "cannot open diff: $!";
 
 $format = "\%-${width}.${width}s \%s\%s\%s \%s\n";
 $nformat = '%-4d %s';
+for (0..7) { $tab[$_] = ' ' x (8 - $_); }
 
 while (<DIFF>) {
     if (($left, $ctrl, $right) = /([\d,]+)([adc])([\d,]+)/) {
@@ -198,11 +199,9 @@ sub num {
 sub expand {
     local($_, $t) = @_;
     if (($test || (($test = '10') =~ s/0/$`/, $test)) eq '11') {
-	1 while(s/\t/' ' x (8 - length($`)%8)/e);
+	1 while s/\t/$tab[length($`) % 8]/e;
     } else {
-	while(($t = index($_, "\t")) > $[) {
-	    substr($_, $t, 1) = ' ' x (8 - $t % 8);
-	}
+	substr($_, $t, 1) = $tab[$t % 8] while(($t = index($_, "\t")) >= $[);
     }
     $_;
 }
