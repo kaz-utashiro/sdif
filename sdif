@@ -5,12 +5,10 @@
 ;#
 ;# sdif: sdiff clone
 ;#
-;# Copyright (c) 1992-1994 Kazumasa Utashiro <utashiro@iij.ad.jp>
-;# Internet Initiative Japan Inc.
-;# 3-13 Kanda Nishiki-cho, Chiyoda-ku, Tokyo 101, Japan
+## Copyright (c) 1992-2005 Kazumasa Utashiro <utashiro@srekcah.org>
 ;#
 ;# Original version on Jul 24 1991
-;; $rcsid = q$Id: sdif,v 1.18 2005/01/16 02:08:08 utashiro Exp $;
+;; $rcsid = q$Id: sdif,v 1.19 2005/01/16 02:20:24 utashiro Exp $;
 ;#
 ;# Redistribution for non-commercial purpose, with or without
 ;# modification, is granted as long as all copyright notices are
@@ -410,7 +408,7 @@ sub min { $_[ ($_[$[] > $_[$[+1]) + $[ ]; }
 .de XX
 .ds XX \\$4\ (v\\$3)
 ..
-.XX $Id: sdif,v 1.18 2005/01/16 02:08:08 utashiro Exp $
+.XX $Id: sdif,v 1.19 2005/01/16 02:20:24 utashiro Exp $
 .TH SDIF 1 \*(XX
 .SH NAME
 sdif \- sdiff clone
@@ -544,9 +542,7 @@ anonymous ftp from the directory
 \fIpub/lang/perl/sra-scripts\fP.
 .SH AUTHOR
 .nf
-Kazumasa Utashiro <utashiro@iij.ad.jp>
-Internet Initiative Japan Inc.
-3-13 Kanda Nishiki-cho, Chiyoda-ku, Tokyo 101, Japan
+Kazumasa Utashiro <utashiro@srekcah.org>
 .fi
 .SH "SEE ALSO"
 perl(1), diff(1), cdif(1), a2ps(1)
