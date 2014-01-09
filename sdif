@@ -1,0 +1,102 @@
+#!/usr/local/bin/perl
+#
+# sdif: sdiff clone
+# by K. Utashiro <utashiro@sra.co.jp>
+# Jul 24 1991
+#
+# Incompatibility:
+#	- has -n option
+#	- doesn't have -s, -o option
+#	- expands tabs
+#	- produces no output for identical files
+#
+# Bugs:
+#	- print wrong data on right side when -b or -i is supplied.
+#
+
+require('getopts.pl');
+
+&Getopts('lbiw:ndo:') || &usage;
+(($ofile, $nfile) = splice(@ARGV, 0, 2)) || &usage;
+
+sub usage {
+	($myname = $0) =~ s,.*/,,;
+	print "Usage: $myname [-n] [-l] [-b] [-i] [-w #] file1 file2\n";
+	exit;
+}
+
+$width = int((($opt_w || 80) - 5) / 2);
+$zzz = "__A_VERY_UNLIKELY_STRING__";
+grep(eval "\$dopts .= '-$_ ' if \$opt_$_", 'b', 'i');
+
+if ($opt_o) {
+	open(OFILE, ">$opt_o") || die ("$opt_o: $!\n");
+}
+
+open(DIFF, "diff $dopts -D$zzz $ofile $nfile |") || die "cannot open diff: $!";
+
+$format = "\%-${width}.${width}s  \%s  \%s\n";
+$nformat = '%-4d %s';
+$mode = 'b';
+
+while (<DIFF>) {
+	chop;
+	print if ($opt_d && /^#(ifdef|ifndef) $zzz/o);
+	if (/^#(ifdef|else) $zzz/o)	{ $mode = 'n'; next; }
+	if (/^#ifndef $zzz/o)		{ $mode = 'o'; next; }
+	if (/^#endif $zzz/o)		{ &flush; $mode = 'b'; next; }
+	push(@old, $_) if ($mode eq 'o' || $mode eq 'b');
+	push(@new, $_) if ($mode eq 'n' || $mode eq 'b');
+	&flush if ($mode eq 'b');
+} continue {
+	print if ($opt_d && /^#endif $zzz/o);
+}
+close(DIFF);
+exit (($? >> 8) == 2);
+
+sub flush {
+	if ($opt_l && $mode eq 'b') {
+		print(@old);
+		@old = @new = ();
+		return;
+	}
+	while(@new || @old) {
+		$old = $new = '';
+		if (@new && @old) {
+			$mark = ($mode eq 'b') ? ' ' : '|';
+		} else {
+			$mark = (@new > 0) ? '>' : '<';
+		}
+		if (@new) {
+			$new = &x(shift(@new));
+			$new = &num(++$nline, $new) if $opt_n;
+		}
+		if (@old) {
+			$old = &x(shift(@old));
+			$old = &num(++$oline, $old) if $opt_n;
+		}
+		&out($old, $mark, $new);
+	}
+	@old = @new = ();
+}
+
+sub out {
+	local($old, $mark, $new) = @_;
+	substr($old, $width) = '';
+	substr($new, $width) = '';
+	printf $format, $old, $mark, $new;
+}
+
+sub x {
+	local($_) = @_;
+	1 while(s/\t/' ' x (8 - length($`)%8)/e);
+	#while (($a, $b) = /^([^\t]*)\t(.*)$/) {
+	#	$_ = $a . ' ' x (8 - length($a) % 8) . $b;
+	#}
+	$_;
+}
+
+sub num {
+	local($num, $_) = @_;
+	sprintf($nformat, $num, $_);
+}
