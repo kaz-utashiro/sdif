@@ -3,18 +3,20 @@
 ;# sdif: sdiff clone
 ;# by K. Utashiro <utashiro@sra.co.jp>
 ;# Original version on Jul 24 1991
-;$rcsid = '$Id: sdif,v 1.2 1991/07/25 19:38:02 utashiro Exp $';
+;$rcsid = '$Id: sdif,v 1.3 1991/07/25 20:38:39 utashiro Exp $';
 ;#
 ;# Incompatibility:
 ;#	- has -n option
 ;#	- has -f option
 ;#	- no -o option
-;#	- all tabs will be expanded
+;#	- all tabs are expanded
 ;#	- default width is 80
+;#	- rcs support
 ;#
 ;($myname = $0) =~ s,.*/,,;
 ;$usage = <<_;
 Usage: $myname [-n] [-l] [-s] [-f] [-b] [-i] [-w #] file1 file2
+       $myname [-rcs] [-rrev1 [-rrev2]] [$myname options] file
 Options:
 	-n	print line number
 	-l	print left column only for identical line
@@ -22,27 +24,70 @@ Options:
 	-f	fold line instead of truncating
 		(folded line is marked by '+' character)
 	-b	ignore trailing blanks
-	-i	igonore the case of letters
+	-i	ignore the case of letters
+	-w	ignore all blanks
 	-w #	specify width of output (default is 80)
+	-rcs	compare rcs files
+		(not required when revision number is supplied)
 _
 
-require('getopts.pl');
+while ($_ = $ARGV[0], /^-/ && shift) {
+    next unless ($top, $rest) = /^-?(.)(.*)/;
+    if (/-rcs$/) { $rcs++; next; }
+    if ($top eq 'r') {
+	warn("$_: Too many revisions\n"), &usage if (@rcs == 2);
+	$rcs++; push(@rcs, $_); next;
+    }
+    if ($top eq 'w') {
+	if ($rest =~ /^\d+$/ || $ARGV[$[] =~ /^\d+$/) {
+	    $width = $rest || shift; next;
+	} else {
+	    $opt_w++; $_ = $rest; redo;
+	}
+    }
+    if (index('nlsfbihd', $top) >= $[) {
+	eval "\$opt_$top++"; $_ = $rest; redo;
+    }
+    &usage;
+}
 
-&Getopts('nlsfbiw:hd') || &usage;
 $opt_h && &usage;
-(($ofile, $nfile) = splice(@ARGV, 0, 2)) || &usage;
+if ($rcs) {
+    $rcsfile = shift || &usage;
+} else {
+    (($ofile, $nfile) = splice(@ARGV, 0, 2)) || &usage;
+}
 
 sub usage {
     print STDERR $usage;
+    print "$rcsid\n" if $rcsid =~ /:/;
     exit;
 }
 
-$width = int((($opt_w || 80) - 5) / 2);
-grep(eval "\$dopts .= '-$_ ' if \$opt_$_", 'b', 'i');
+$width = 80 unless defined($width);
+$width = int(($width - 5) / 2);
+grep(eval "\$dopts .= '-$_ ' if \$opt_$_", 'b', 'i', 'w');
+
+if ($rcs) {
+    $diffcmd = "rcsdiff @rcs $dopts $rcsfile|";
+    $ofile = 'co -p ' . shift(@rcs) . " $rcsfile|";
+    if (@rcs) {
+	$nfile = 'co -p ' . shift(@rcs) . " $rcsfile|";
+    } else {
+	$nfile = $rcsfile;
+    }
+    if ($opt_d) {
+	print STDERR "\$ofile = $ofile\n";
+	print STDERR "\$nfile = $nfile\n";
+	print STDERR "\$diffcmd = $diffcmd\n";
+    }
+} else {
+    $diffcmd = "diff $dopts $ofile $nfile |";
+}
 
 open(OLD, $ofile) || die "$ofile: $!\n";
 open(NEW, $nfile) || die "$nfile: $!\n";
-open(DIFF, "diff $dopts $ofile $nfile |") || die "cannot open diff: $!";
+open(DIFF, $diffcmd) || die "cannot open diff: $!";
 
 $format = "\%-${width}.${width}s \%s\%s\%s \%s\n";
 $nformat = '%-4d %s';
