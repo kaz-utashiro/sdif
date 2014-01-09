@@ -7,10 +7,10 @@
 ;#
 ;# Copyright (c) 1992-1994 Kazumasa Utashiro <utashiro@iij.ad.jp>
 ;# Internet Initiative Japan Inc.
-;# Sanbancho Annex Bldg. 1-4, Sanban-cho, Chiyoda-ku, Tokyo 102, Japan
+;# 3-13 Kanda Nishiki-cho, Chiyoda-ku, Tokyo 101, Japan
 ;#
 ;# Original version on Jul 24 1991
-;; $rcsid = q$Id: sdif,v 1.16 1995/11/06 16:27:21 utashiro Exp $;
+;; $rcsid = q$Id: sdif,v 1.17 1997/09/10 04:18:52 utashiro Exp $;
 ;#
 ;# Redistribution for non-commercial purpose, with or without
 ;# modification, is granted as long as all copyright notices are
@@ -199,7 +199,8 @@ DIFF: while (<DIFF>) {
     elsif (/^--- /) {
 	&out($_, ' ', scalar(<DIFF>), 1);
     }
-    elsif (($oline, $nline) = /^\@\@ -(\d+),\d+ \+(\d+),\d+ \@\@$/) {
+    elsif (/^\@\@ -(\d+)(,\d+)? \+(\d+)(,\d+)? \@\@$/) {
+	($oline, $nline) = ($1, $3);
 	$markwidth = 1;
 	&out($_, ' ', $_, 1);
 	while (<DIFF>) {
@@ -402,7 +403,7 @@ sub min { $_[ ($_[$[] > $_[$[+1]) + $[ ]; }
 .de XX
 .ds XX \\$4\ (v\\$3)
 ..
-.XX $Id: sdif,v 1.16 1995/11/06 16:27:21 utashiro Exp $
+.XX $Id: sdif,v 1.17 1997/09/10 04:18:52 utashiro Exp $
 .TH SDIF 1 \*(XX
 .SH NAME
 sdif \- sdiff clone
@@ -538,7 +539,7 @@ anonymous ftp from the directory
 .nf
 Kazumasa Utashiro <utashiro@iij.ad.jp>
 Internet Initiative Japan Inc.
-1-4 Sanban-cho, Chiyoda-ku, Tokyo 102, Japan
+3-13 Kanda Nishiki-cho, Chiyoda-ku, Tokyo 101, Japan
 .fi
 .SH "SEE ALSO"
 perl(1), diff(1), cdif(1), a2ps(1)
