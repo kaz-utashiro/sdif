@@ -6,7 +6,7 @@
 ;# Software Research Associates, Inc., Japan
 ;#
 ;# Original version on Jul 24 1991
-;; $rcsid = '$Id: sdif,v 1.9 1992/03/23 20:13:59 utashiro Exp $';
+;; $rcsid = '$Id: sdif,v 1.10 1992/04/20 18:49:40 utashiro Exp $';
 ;#
 ;# Incompatibility:
 ;#	- has -n option for numbering
@@ -212,7 +212,7 @@ sub fold {
 	    $room = $width - $opt_n * 5;
 	    next;
 	}
-	last if !$room || (/^[200-\377]/ && $room < 2);
+	last if !$room || (/^[\200-\377]/ && $room < 2);
 	if (($mb = s/^([\200-\377].)+//) || s/[^\b\r\200-\377]+//) {
 	    $n = $room; $n -= $room % 2 if $mb;
 	    ($c, $r) = unpack("a$n a*", $&);
