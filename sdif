@@ -8,11 +8,12 @@
 ;# Software Research Associates, Inc., Japan
 ;#
 ;# Original version on Jul 24 1991
-;; $rcsid = q$Id: sdif,v 1.13 1992/10/05 12:29:59 utashiro Exp $;
+;; $rcsid = q$Id: sdif,v 1.14 1992/12/11 01:27:56 utashiro Exp $;
 ;#
 ;# Incompatibility:
 ;#	- has -n option for numbering
 ;#	- has -f option for folding
+;#	- has -F option for word boundary folding
 ;#	- has -c option for context diff
 ;#	- has -m option to keep diff mark
 ;#	- handle backspace and caridge return
@@ -25,7 +26,7 @@
 ;#
 $myname = ('sdif', split('/', $0));
 $usage = <<_;
-Usage: $myname [-n] [-l] [-s] [-f] [-b] [-i] [-w] [-w #] [-c] [file1 [file2]]
+Usage: $myname [-n] [-l] [-s] [-[fF]] [-b] [-i] [-w] [-w #] [-c] [file1 [file2]]
        $myname [-rcs] [-q] [-rrev1 [-rrev2]] [$myname options] file
 Options:
 	-n	print line number
@@ -383,7 +384,7 @@ sub min { $_[ ($_[$[] > $_[$[+1]) + $[ ]; }
 .de XX
 .ds XX \\$4\ (v\\$3)
 ..
-.XX $Id: sdif,v 1.13 1992/10/05 12:29:59 utashiro Exp $
+.XX $Id: sdif,v 1.14 1992/12/11 01:27:56 utashiro Exp $
 .TH SDIF 1 \*(XX
 .SH NAME
 sdif \- sdiff clone
@@ -393,12 +394,12 @@ sdif \- sdiff clone
 .ta \n(wwu
 .ti -\n(wwu
 \fBsdif\fP	\c
-[-n] [-l] [-s] [-f] [-b] [-i] [-w] [-w \fIwidth\fP]
-[-c] [file1 [file2]]
+[\-n] [\-l] [\-s] [\-[fF]] [\-b] [\-i] [\-w] [\-w \fIwidth\fP]
+[\-c] [file1 [file2]]
 .br
 .ti -\n(wwu
 \fBsdif\fP	\c
-[-rcs] [-q] [-r\fIrev1\fP [-r\fIrev2\fP]] [\fIsdif options\fP] file
+[\-rcs] [\-q] [\-r\fIrev1\fP [\-r\fIrev2\fP]] [\fIsdif options\fP] file
 .SH DESCRIPTION
 .I Sdif
 is a clone program of System V \fIsdiff\fP(1) command.  The
@@ -462,7 +463,7 @@ Fold the line if it is longer than printing width.  Folded
 line is indicated by `+' mark at top of the line.  No
 continue mark is printed when numbering option is on.
 .IP \-F
-Fold the line by word boundaries.
+Fold longs line at word boundaries.
 .IP \-m
 Usually diff mark from diff output are trimed off.  This
 option forces to leave them on output listing.  I prefer to
@@ -472,10 +473,11 @@ Use rcsdiff instead of normal diff.  Option \-rcs is not
 required when \-r\fIrev\fP is supplied.
 .IP \-cdif
 Use \fIcdif\fP command instead of normal diff command.
-.IP "\-b, \-w, \-c, \-u"
+.IP "\-b, \-w, \-c, \-u, \-B"
 Passed through to the back-end diff command.  \fISdif\fP can
 process the output from context diff (\-c) and unified diff
-(\-u) if those are available.
+(\-u) if those are available.  Option \-B is valid only for
+\fIcdif\fP.
 .SH RELATED COMMANDS
 .IP a2ps
 is a command which converts ascii text to postscript
