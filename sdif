@@ -3,7 +3,7 @@
 ;# sdif: sdiff clone
 ;# by K. Utashiro <utashiro@sra.co.jp>
 ;# Original version on Jul 24 1991
-;$rcsid = '$Id: sdif,v 1.3 1991/07/25 20:38:39 utashiro Exp $';
+;$rcsid = '$Id: sdif,v 1.4 1991/07/25 22:35:36 utashiro Exp $';
 ;#
 ;# Incompatibility:
 ;#	- has -n option
@@ -15,8 +15,8 @@
 ;#
 ;($myname = $0) =~ s,.*/,,;
 ;$usage = <<_;
-Usage: $myname [-n] [-l] [-s] [-f] [-b] [-i] [-w #] file1 file2
-       $myname [-rcs] [-rrev1 [-rrev2]] [$myname options] file
+Usage: $myname [-n] [-l] [-s] [-f] [-b] [-i] [-w] [-w #] file1 file2
+       $myname [-rcs] [-q] [-rrev1 [-rrev2]] [$myname options] file
 Options:
 	-n	print line number
 	-l	print left column only for identical line
@@ -29,6 +29,7 @@ Options:
 	-w #	specify width of output (default is 80)
 	-rcs	compare rcs files
 		(not required when revision number is supplied)
+	-q	don't print rcs diagnostics
 _
 
 while ($_ = $ARGV[0], /^-/ && shift) {
@@ -45,7 +46,7 @@ while ($_ = $ARGV[0], /^-/ && shift) {
 	    $opt_w++; $_ = $rest; redo;
 	}
     }
-    if (index('nlsfbihd', $top) >= $[) {
+    if (index('nlsfbihdq', $top) >= $[) {
 	eval "\$opt_$top++"; $_ = $rest; redo;
     }
     &usage;
@@ -69,10 +70,11 @@ $width = int(($width - 5) / 2);
 grep(eval "\$dopts .= '-$_ ' if \$opt_$_", 'b', 'i', 'w');
 
 if ($rcs) {
-    $diffcmd = "rcsdiff @rcs $dopts $rcsfile|";
-    $ofile = 'co -p ' . shift(@rcs) . " $rcsfile|";
+    $rcsopt = '-q' if $opt_q;
+    $diffcmd = "rcsdiff $rcsopt @rcs $dopts $rcsfile|";
+    $ofile = "co $rcsopt -p " . shift(@rcs) . " $rcsfile|";
     if (@rcs) {
-	$nfile = 'co -p ' . shift(@rcs) . " $rcsfile|";
+	$nfile = "co $rcsopt -p " . shift(@rcs) . " $rcsfile|";
     } else {
 	$nfile = $rcsfile;
     }
