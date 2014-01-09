@@ -1,102 +1,163 @@
 #!/usr/local/bin/perl
-#
-# sdif: sdiff clone
-# by K. Utashiro <utashiro@sra.co.jp>
-# Jul 24 1991
-#
-# Incompatibility:
-#	- has -n option
-#	- doesn't have -s, -o option
-#	- expands tabs
-#	- produces no output for identical files
-#
-# Bugs:
-#	- print wrong data on right side when -b or -i is supplied.
-#
+;#
+;# sdif: sdiff clone
+;# by K. Utashiro <utashiro@sra.co.jp>
+;# Original version on Jul 24 1991
+;$rcsid = '$Id: sdif,v 1.2 1991/07/25 19:38:02 utashiro Exp $';
+;#
+;# Incompatibility:
+;#	- has -n option
+;#	- has -f option
+;#	- no -o option
+;#	- all tabs will be expanded
+;#	- default width is 80
+;#
+;($myname = $0) =~ s,.*/,,;
+;$usage = <<_;
+Usage: $myname [-n] [-l] [-s] [-f] [-b] [-i] [-w #] file1 file2
+Options:
+	-n	print line number
+	-l	print left column only for identical line
+	-s	don't print identical line
+	-f	fold line instead of truncating
+		(folded line is marked by '+' character)
+	-b	ignore trailing blanks
+	-i	igonore the case of letters
+	-w #	specify width of output (default is 80)
+_
 
 require('getopts.pl');
 
-&Getopts('lbiw:ndo:') || &usage;
+&Getopts('nlsfbiw:hd') || &usage;
+$opt_h && &usage;
 (($ofile, $nfile) = splice(@ARGV, 0, 2)) || &usage;
 
 sub usage {
-	($myname = $0) =~ s,.*/,,;
-	print "Usage: $myname [-n] [-l] [-b] [-i] [-w #] file1 file2\n";
-	exit;
+    print STDERR $usage;
+    exit;
 }
 
 $width = int((($opt_w || 80) - 5) / 2);
-$zzz = "__A_VERY_UNLIKELY_STRING__";
 grep(eval "\$dopts .= '-$_ ' if \$opt_$_", 'b', 'i');
 
-if ($opt_o) {
-	open(OFILE, ">$opt_o") || die ("$opt_o: $!\n");
-}
+open(OLD, $ofile) || die "$ofile: $!\n";
+open(NEW, $nfile) || die "$nfile: $!\n";
+open(DIFF, "diff $dopts $ofile $nfile |") || die "cannot open diff: $!";
 
-open(DIFF, "diff $dopts -D$zzz $ofile $nfile |") || die "cannot open diff: $!";
-
-$format = "\%-${width}.${width}s  \%s  \%s\n";
+$format = "\%-${width}.${width}s \%s\%s\%s \%s\n";
 $nformat = '%-4d %s';
-$mode = 'b';
 
 while (<DIFF>) {
-	chop;
-	print if ($opt_d && /^#(ifdef|ifndef) $zzz/o);
-	if (/^#(ifdef|else) $zzz/o)	{ $mode = 'n'; next; }
-	if (/^#ifndef $zzz/o)		{ $mode = 'o'; next; }
-	if (/^#endif $zzz/o)		{ &flush; $mode = 'b'; next; }
-	push(@old, $_) if ($mode eq 'o' || $mode eq 'b');
-	push(@new, $_) if ($mode eq 'n' || $mode eq 'b');
-	&flush if ($mode eq 'b');
-} continue {
-	print if ($opt_d && /^#endif $zzz/o);
+    if (($left, $ctrl, $right) = /([\d,]+)([adc])([\d,]+)/) {
+	($l1, $l2) = &range($left);
+	($r1, $r2) = &range($right);
+	$identical_line = $l1 - $oline;
+	$identical_line -= 1 if ($ctrl ne 'a');
+	&print_identical($identical_line);
+	@old = @new = ();
+	print if ($opt_d || $opt_s);
+	if ($ctrl eq 'd' || $ctrl eq 'c') {
+	    @old = &read(DIFF, $n = $l2 - $l1 + 1);
+	    for (@old) { s/^..//; }
+	    &read(OLD, $n);
+	}
+	if ($ctrl eq 'c') {
+	    ($separator) = &read(DIFF, 1);
+	    die "Illegal separator $separator" if ($separator ne "---\n");
+	}
+	if ($ctrl eq 'a' || $ctrl eq 'c') {
+	    @new = &read(DIFF, $n = $r2 - $r1 + 1);
+	    for (@new) { s/^..//; }
+	    &read(NEW, $n);
+	}
+	&flush;
+    } else {
+	warn "Unrecognizable line -- $_";
+    }
 }
+&print_identical(-1) unless $opt_s;
+close(OLD); close(NEW);
 close(DIFF);
 exit (($? >> 8) == 2);
 
 sub flush {
-	if ($opt_l && $mode eq 'b') {
-		print(@old);
-		@old = @new = ();
-		return;
+    while(@new || @old) {
+	undef($old); undef($new);
+	$mark = !@new ? '<' : @old ? '|' : '>';
+	$new = shift(@new), ++$nline if (@new);
+	$old = shift(@old), ++$oline if (@old);
+	&out($old, $mark, $new);
+    }
+}
+
+sub print_identical {
+    local($n, $old, $new) = @_;
+    while ($n--) {
+	$old = <OLD>; $new = <NEW>;
+	last if (!defined($old) && !defined($new));
+	#last if (!defined($old = <OLD>) && !defined($new = <NEW>));
+	$oline++; $nline++;
+	next if $opt_s;
+	if ($opt_l) {
+	    $old = &num($oline, &expand($old)) if $opt_n;
+	    print $old;
+	} else {
+	    &out($old, ' ', $new);
 	}
-	while(@new || @old) {
-		$old = $new = '';
-		if (@new && @old) {
-			$mark = ($mode eq 'b') ? ' ' : '|';
-		} else {
-			$mark = (@new > 0) ? '>' : '<';
-		}
-		if (@new) {
-			$new = &x(shift(@new));
-			$new = &num(++$nline, $new) if $opt_n;
-		}
-		if (@old) {
-			$old = &x(shift(@old));
-			$old = &num(++$oline, $old) if $opt_n;
-		}
-		&out($old, $mark, $new);
-	}
-	@old = @new = ();
+    }
+}
+
+sub read {
+    local($fh, $c, @buf) = @_;
+    push(@buf, scalar(<$fh>)) while ($c--);
+    @buf;
 }
 
 sub out {
-	local($old, $mark, $new) = @_;
-	substr($old, $width) = '';
-	substr($new, $width) = '';
-	printf $format, $old, $mark, $new;
+    local($old, $mark, $new) = @_;
+    local($o, $n);
+    local($ocont, $ncont, $contmark) = (' ', ' ', '+');
+    if (defined($old)) {
+	chop($old = &expand($old));
+	$old = &num($oline, $old) if $opt_n;
+    }
+    if (defined($new)) {
+	chop($new = &expand($new));
+	$new = &num($nline, $new) if $opt_n;
+    }
+    while(length($old) || length($new)) {
+	($o, $old) = unpack("a${width}a*", $old);
+	($n, $new) = unpack("a${width}a*", $new);
+	printf $format, $o, $ocont, $mark, $ncont, $n;
+	last unless $opt_f;
+	if ($opt_n) {
+	    $old = ' ' x 5 . $old if (length($old));
+	    $new = ' ' x 5 . $new if (length($new));
+	} else {
+	    $ocont = length($old) ? $contmark : ' ';
+	    $ncont = length($new) ? $contmark : ' ';
+	}
+    }
 }
 
-sub x {
-	local($_) = @_;
-	1 while(s/\t/' ' x (8 - length($`)%8)/e);
-	#while (($a, $b) = /^([^\t]*)\t(.*)$/) {
-	#	$_ = $a . ' ' x (8 - length($a) % 8) . $b;
-	#}
-	$_;
+sub range {
+    local($_) = @_;
+    /,/ ? split(/,/) : ($_, $_);
 }
 
 sub num {
-	local($num, $_) = @_;
-	sprintf($nformat, $num, $_);
+    local($num, $_) = @_;
+    sprintf($nformat, $num, $_);
+}
+
+sub expand {
+    local($_, $t) = @_;
+    if (($test || (($test = '10') =~ s/0/$`/, $test)) eq '11') {
+	1 while(s/\t/' ' x (8 - length($`)%8)/e);
+    } else {
+	while(($t = index($_, "\t")) > $[) {
+	    substr($_, $t, 1) = ' ' x (8 - $t % 8);
+	}
+    }
+    $_;
 }
