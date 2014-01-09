@@ -3,7 +3,7 @@
 ;# sdif: sdiff clone
 ;# by K. Utashiro <utashiro@sra.co.jp>
 ;# Original version on Jul 24 1991
-;$rcsid = '$Id: sdif,v 1.5 1991/07/27 21:14:57 utashiro Exp $';
+;$rcsid = '$Id: sdif,v 1.6 1991/07/29 16:37:35 utashiro Exp $';
 ;#
 ;# Incompatibility:
 ;#	- has -n option
@@ -170,11 +170,11 @@ sub out {
 	chop($new = &expand($new));
 	$new = &num($nline, $new) if $opt_n;
     }
-    do {
+    while (1) {
 	($o, $old) = unpack("a${width}a*", $old);
 	($n, $new) = unpack("a${width}a*", $new);
 	printf $format, $o, $ocont, $mark, $ncont, $n;
-	last unless $opt_f;
+	last if (!$opt_f || (!length($old) && !length($new)));
 	if ($opt_n) {
 	    $old = ' ' x 5 . $old if (length($old));
 	    $new = ' ' x 5 . $new if (length($new));
@@ -182,7 +182,7 @@ sub out {
 	    $ocont = length($old) ? $contmark : ' ';
 	    $ncont = length($new) ? $contmark : ' ';
 	}
-    } while(length($old) || length($new));
+    }
 }
 
 sub range {
