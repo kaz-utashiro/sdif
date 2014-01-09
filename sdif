@@ -6,7 +6,7 @@
 ;# Software Research Associates, Inc., Japan
 ;#
 ;# Original version on Jul 24 1991
-;; $rcsid = '$Id: sdif,v 1.8 1992/03/23 18:58:47 utashiro Exp $';
+;; $rcsid = '$Id: sdif,v 1.9 1992/03/23 20:13:59 utashiro Exp $';
 ;#
 ;# Incompatibility:
 ;#	- has -n option for numbering
@@ -61,6 +61,7 @@ while ($_ = $ARGV[0], /^-/ && shift) {
 }
 
 $opt_h && &usage;
+push(@rcsopts, '-q') if $opt_q;
 if ($rcs) {
     $rcsfile = shift || &usage("No RCS filename\n\n");
     $ofile = "co @rcsopts -p " . $rcs[0] . " $rcsfile|";
@@ -85,7 +86,6 @@ $width = 80 unless defined($width);
 $width = int(($width - 5) / 2);
 grep(eval "\$diffopts .= '-$_ ' if \$opt_$_", 'b', 'i', 'w');
 
-push(@rcsopts, '-q') if $opt_q;
 if ($opt_c) {
     $diffcmd  = "cdif $diffopts";
     if ($rcs) {
