@@ -1,6 +1,7 @@
 #!/usr/local/bin/perl
-'di';
-'ig00';
+'di ';
+'ds 00 \"';
+'ig 00 ';
 ;#
 ;# sdif: sdiff clone
 ;#
@@ -9,7 +10,7 @@
 ;# Sanbancho Annex Bldg. 1-4, Sanban-cho, Chiyoda-ku, Tokyo 102, Japan
 ;#
 ;# Original version on Jul 24 1991
-;; $rcsid = q$Id: sdif,v 1.15 1994/11/08 08:51:34 utashiro Exp $;
+;; $rcsid = q$Id: sdif,v 1.16 1995/11/06 16:27:21 utashiro Exp $;
 ;#
 ;# Redistribution for non-commercial purpose, with or without
 ;# modification, is granted as long as all copyright notices are
@@ -392,7 +393,7 @@ sub max { $_[ ($_[$[] < $_[$[+1]) + $[ ]; }
 sub min { $_[ ($_[$[] > $_[$[+1]) + $[ ]; }
 
 ######################################################################
-.00;			# finish .ig
+.00 ;			# finish .ig
 
 'di			\" finish diversion--previous line must be blank
 .nr nl 0-1		\" fake up transition to first page again
@@ -401,7 +402,7 @@ sub min { $_[ ($_[$[] > $_[$[+1]) + $[ ]; }
 .de XX
 .ds XX \\$4\ (v\\$3)
 ..
-.XX $Id: sdif,v 1.15 1994/11/08 08:51:34 utashiro Exp $
+.XX $Id: sdif,v 1.16 1995/11/06 16:27:21 utashiro Exp $
 .TH SDIF 1 \*(XX
 .SH NAME
 sdif \- sdiff clone
@@ -419,16 +420,16 @@ sdif \- sdiff clone
 [\-rcs] [\-q] [\-r\fIrev1\fP [\-r\fIrev2\fP]] [\fIsdif options\fP] file
 .SH DESCRIPTION
 .I Sdif
-is a clone program of System V \fIsdiff\fP(1) command.  The
-basic feature of sdif and sdiff is making a side-by-side
-listing of two different files.  It makes much easier to
-compare two files than looking at the normal diff output.
-All contents of two files a listed on left and right sides.
-Center column is used to indicate how different the line.
-No mark means there is no difference.  The line only
-included in left file is indicated by `<' mark, and `>' is
-used to lines only in right file.  Modified line has a mark
-`|'.  Example output from sdif is like this:
+is a clone of System V \fIsdiff\fP(1) command.  The basic
+feature of \fIsdif\fP and \fIsdiff\fP is making a
+side-by-side listing of two different files.  It makes much
+easier to compare two files than looking at the normal diff
+output.  All contents of two files a listed on left and
+right sides.  Center column is used to indicate how
+different the line.  No mark means there is no difference.
+The line only included in left file is indicated by `<'
+mark, and `>' is used to lines only in right file.  Modified
+line has a mark `|'.  Example output from sdif is like this:
 .nf
 .cs R 25
 .ft CW
@@ -444,9 +445,9 @@ used to lines only in right file.  Modified line has a mark
 .fi
 .PP
 .I Sdif
-has some incompatibilities with sdiff.  Negative
-incompatibility is a lack of \-o option and expanding all
-tabs to spaces.  Other incompatibilities are:
+has some incompatibilities with original \fIsdiff\fP.
+Negative incompatibility is a lack of \-o option and
+expanding all tabs to spaces.  Other incompatibilities are:
 .nf
 
 	\(bu line numbering
@@ -530,13 +531,15 @@ Next is a example that I'm using often.
 
 .fi
 .PP
-All of these programs can be ftp'ed from sra.co.jp
-(133.137.4.3) by anonymous ftp from the directory
-pub/lang/perl/sra-scripts.
+All of these programs can be ftp'ed from ftp.sra.co.jp by
+anonymous ftp from the directory
+\fIpub/lang/perl/sra-scripts\fP.
 .SH AUTHOR
-Kazumasa Utashiro <utashiro@sra.co.jp>
-.br
-Software Research Associates, Inc., Japan
+.nf
+Kazumasa Utashiro <utashiro@iij.ad.jp>
+Internet Initiative Japan Inc.
+1-4 Sanban-cho, Chiyoda-ku, Tokyo 102, Japan
+.fi
 .SH "SEE ALSO"
 perl(1), diff(1), cdif(1), a2ps(1)
 .ex
