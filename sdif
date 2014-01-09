@@ -1,21 +1,26 @@
 #!/usr/local/bin/perl
 ;#
 ;# sdif: sdiff clone
-;# by K. Utashiro <utashiro@sra.co.jp>
+;#
+;# Copyright (c) 1992 Kazumasa Utashiro <utashiro@sra.co.jp>
+;# Software Research Associates, Inc., Japan
+;#
 ;# Original version on Jul 24 1991
-;$rcsid = '$Id: sdif,v 1.7 1991/07/31 20:43:10 utashiro Exp $';
+;; $rcsid = '$Id: sdif,v 1.8 1992/03/23 18:58:47 utashiro Exp $';
 ;#
 ;# Incompatibility:
-;#	- has -n option
-;#	- has -f option
+;#	- has -n option for numbering
+;#	- has -f option for folding
+;#	- handle backspace and caridge return
 ;#	- no -o option
 ;#	- all tabs are expanded
 ;#	- default width is 80
 ;#	- rcs support
+;#	- cdif support
 ;#
 ;($myname = $0) =~ s,.*/,,;
 ;$usage = <<_;
-Usage: $myname [-n] [-l] [-s] [-f] [-b] [-i] [-w] [-w #] file1 file2
+Usage: $myname [-n] [-l] [-s] [-f] [-b] [-i] [-w] [-w #] [-c] file1 file2
        $myname [-rcs] [-q] [-rrev1 [-rrev2]] [$myname options] file
 Options:
 	-n	print line number
@@ -27,11 +32,13 @@ Options:
 	-i	ignore the case of letters
 	-w	ignore all blanks
 	-w #	specify width of output (default is 80)
+	-c	use "cdif"
 	-rcs	compare rcs files
 		(not required when revision number is supplied)
+	-rrev	RCS revision number
 	-q	don't print rcs diagnostics
 _
-$opts = 'nlsfbiwhqdx';
+$opts = 'nlsfbiwhqdxc';
 while ($_ = $ARGV[0], /^-/ && shift) {
     next unless ($car, $cdr) = /^-?(.)(.*)/;
     if (/-rcs$/) { $rcs++; next; }
@@ -56,6 +63,12 @@ while ($_ = $ARGV[0], /^-/ && shift) {
 $opt_h && &usage;
 if ($rcs) {
     $rcsfile = shift || &usage("No RCS filename\n\n");
+    $ofile = "co @rcsopts -p " . $rcs[0] . " $rcsfile|";
+    if (@rcs > 1) {
+	$nfile = "co @rcsopts -p " . $rcs[1] . " $rcsfile|";
+    } else {
+	$nfile = $rcsfile;
+    }
 } else {
     &usage("Two filenames are required.\n\n") if (@ARGV != 2);
     ($ofile, $nfile) = splice(@ARGV, 0, 2);
@@ -70,31 +83,31 @@ sub usage {
 
 $width = 80 unless defined($width);
 $width = int(($width - 5) / 2);
-grep(eval "\$dopts .= '-$_ ' if \$opt_$_", 'b', 'i', 'w');
+grep(eval "\$diffopts .= '-$_ ' if \$opt_$_", 'b', 'i', 'w');
 
-if ($rcs) {
-    push(@rcsopt, '-q') if $opt_q;
-    $diffcmd = "rcsdiff @rcsopt @rcs $dopts $rcsfile|";
-    $ofile = "co @rcsopt -p " . shift(@rcs) . " $rcsfile|";
-    if (@rcs) {
-	$nfile = "co @rcsopt -p " . shift(@rcs) . " $rcsfile|";
+push(@rcsopts, '-q') if $opt_q;
+if ($opt_c) {
+    $diffcmd  = "cdif $diffopts";
+    if ($rcs) {
+	$diffcmd .= " -rcs @rcsopts @rcs $rcsfile |";
     } else {
-	$nfile = $rcsfile;
+	$diffcmd .= " $ofile $nfile |";
     }
-    if ($opt_d) {
-	print STDERR "\$ofile = $ofile\n";
-	print STDERR "\$nfile = $nfile\n";
-	print STDERR "\$diffcmd = $diffcmd\n";
-    }
+} elsif ($rcs) {
+    $diffcmd = "rcsdiff @rcsopts @rcs $diffopts $rcsfile|";
 } else {
-    $diffcmd = "diff $dopts $ofile $nfile |";
+    $diffcmd = "diff $diffopts $ofile $nfile |";
+}
+if ($opt_d) {
+    print STDERR "\$ofile = $ofile\n";
+    print STDERR "\$nfile = $nfile\n";
+    print STDERR "\$diffcmd = $diffcmd\n";
 }
 
 open(OLD, $ofile) || die "$ofile: $!\n";
 open(NEW, $nfile) || die "$nfile: $!\n";
 open(DIFF, $diffcmd) || die "cannot open diff: $!";
 
-$format = "\%-${width}.${width}s \%s\%s\%s \%s\n";
 $nformat = '%-4d %s';
 for (0..7) { $tab[$_] = ' ' x (8 - $_); }
 
@@ -108,13 +121,15 @@ while (<DIFF>) {
 	@old = @new = ();
 	print if ($opt_d || $opt_s);
 	if ($ctrl eq 'd' || $ctrl eq 'c') {
-	    @old = &read(OLD, $n = $l2 - $l1 + 1);
-	    &read(DIFF, $n);
+	    @old = &read(DIFF, $n = $l2 - $l1 + 1);
+	    &read(OLD, $n);
+	    foreach (@old) { s/^< //; }
 	}
 	&read(DIFF, 1) if ($ctrl eq 'c');
 	if ($ctrl eq 'a' || $ctrl eq 'c') {
-	    @new = &read(NEW, $n = $r2 - $r1 + 1);
-	    &read(DIFF, $n);
+	    @new = &read(DIFF, $n = $r2 - $r1 + 1);
+	    foreach (@new) { s/^> //; }
+	    &read(NEW, $n);
 	}
 	&flush;
     } else {
@@ -141,7 +156,6 @@ sub print_identical {
     while ($n--) {
 	$old = <OLD>; $new = <NEW>;
 	last if (!defined($old) && !defined($new));
-	#last if (!defined($old = <OLD>) && !defined($new = <NEW>));
 	$oline++; $nline++;
 	next if $opt_s;
 	if ($opt_l) {
@@ -172,18 +186,46 @@ sub out {
 	$new = &num($nline, $new) if $opt_n;
     }
     while (1) {
-	($o, $old) = unpack("a${width}a*", $old);
-	($n, $new) = unpack("a${width}a*", $new);
-	printf $format, $o, $ocont, $mark, $ncont, $n;
-	last if (!$opt_f || (!length($old) && !length($new)));
+	($o, $old) = &fold($old, $width, 1);
+	($n, $new) = &fold($new, $width);
+	print $o, ' ', $ocont, $mark, $ncont, ' ', $n, "\n";
+	last if !$opt_f || ($old eq '' && $new eq '');
 	if ($opt_n) {
-	    $old = ' ' x 5 . $old if (length($old));
-	    $new = ' ' x 5 . $new if (length($new));
+	    $old = ' ' x 5 . $old if length($old);
+	    $new = ' ' x 5 . $new if length($new);
 	} else {
 	    $ocont = length($old) ? $contmark : ' ';
 	    $ncont = length($new) ? $contmark : ' ';
 	}
     }
+}
+
+sub fold {
+    local($_, $width, $pad) = @_;
+    local($l, $room) = ('', $width);
+    local($n, $c, $r);
+    while (length) {
+	if (s/^\010//) {
+	    ($room < $width) && $room++; $c = $&; next;
+	} elsif (s/^\r//) {
+	    $c = "\010" x ($width - $room - $opt_n * 5);
+	    $room = $width - $opt_n * 5;
+	    next;
+	}
+	last if !$room || (/^[200-\377]/ && $room < 2);
+	if (($mb = s/^([\200-\377].)+//) || s/[^\b\r\200-\377]+//) {
+	    $n = $room; $n -= $room % 2 if $mb;
+	    ($c, $r) = unpack("a$n a*", $&);
+	    $room -= length($c);
+	    $_ = $r . $_;
+	} else {
+	    die "$myname: panic";
+	}
+    } continue {
+	$l .= $c;
+    }
+    $l .= ' ' x $room if $pad;
+    ($l, $_);
 }
 
 sub range {
@@ -199,9 +241,22 @@ sub num {
 sub expand {
     local($_, $t) = @_;
     if (($test || (($test = '10') =~ s/0/$`/, $test)) eq '11') {
-	1 while s/\t/$tab[length($`) % 8]/e;
+	1 while s/\t/$tab[&pwidth($`) % 8]/e;
     } else {
 	substr($_, $t, 1) = $tab[$t % 8] while(($t = index($_, "\t")) >= $[);
     }
     $_;
 }
+
+sub pwidth {
+    return(length($_[0])) unless($_[0]=~/[\033\010\f\r]/);
+    local($_)=shift;
+    s/^.*[\f\r]//;
+    s/\033\$[\@B]|\033\([JB]//g;
+    1 while s/[^\010]\010//;
+    s/^\010+//;
+    length($_);
+}
+
+sub max { $_[ ($_[$[] < $_[$[+1]) + $[]; }
+sub min { $_[ !($_[$[] < $_[$[+1]) + $[]; }
