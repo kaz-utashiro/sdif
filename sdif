@@ -1,14 +1,22 @@
-#!/usr/local/bin/perl
+#!/usr/bin/perl -CSDA
 'di ';
 'ds 00 \"';
 'ig 00 ';
+
+use utf8;
+use strict;
+use warnings;
+use List::Util;
+use Text::MBPrintf qw(mbwidth $wchar_re);
+use Unicode::EastAsianWidth;
+
 ;#
 ;# sdif: sdiff clone
 ;#
-## Copyright (c) 1992-2005 Kazumasa Utashiro <utashiro@srekcah.org>
+## Copyright (c) 1992-2014 Kazumasa Utashiro
 ;#
 ;# Original version on Jul 24 1991
-;; $rcsid = q$Id: sdif,v 1.19 2005/01/16 02:20:24 utashiro Exp $;
+;; my $rcsid = q$Id: sdif,v 2.1 2014/01/18 06:20:05 utashiro Exp $;
 ;#
 ;# Redistribution for non-commercial purpose, with or without
 ;# modification, is granted as long as all copyright notices are
@@ -29,8 +37,8 @@
 ;#	- cdif (word context diff) support
 ;#	- read diff data from file or stdin
 ;#
-$sdif = ('sdif', split('/', $0));
-$usage = <<_;
+my $sdif = $0 =~ m|/([^/]+)$| ? $1 : 'sdif';
+my $usage = <<EOS;
 Usage: $sdif [-n] [-l] [-s] [-[fF]] [-b] [-i] [-w] [-w #] [-c] [file1 [file2]]
        $sdif [-rcs] [-q] [-rrev1 [-rrev2]] [$sdif options] file
 Options:
@@ -53,14 +61,44 @@ Options:
 	-q	don't print rcs diagnostics
 	-1	print old file only
 	-2	print new file only
-_
+EOS
 
 if ($ENV{'SDIFOPTS'}) {
     require('shellwords.pl');
     unshift(@ARGV, &shellwords($ENV{'SDIFOPTS'}));
-};
-$opts = 'nlsfhqdxmF12'.'cbiwuB';
-while ($_ = $ARGV[0], /^-/ && shift) {
+}
+
+my $opt_n;
+my $opt_l;
+my $opt_s;
+my $opt_f;
+my $opt_h;
+my $opt_q;
+my $opt_d;
+my $opt_x;
+my $opt_m;
+my $opt_F;
+my $opt_1;
+my $opt_2;
+my $opt_c;
+my $opt_b;
+my $opt_i;
+my $opt_u;
+my $opt_B;
+
+my @diffopts;
+my @rcsopts;
+my @rcs;
+my $rcs;
+my $rcsfile;
+my $diff;
+my $readfile;
+my $screen_width;
+my $width;
+
+my $opts = 'nlsfhqdxmF12'.'cbiwuB';
+while (@ARGV and ($ARGV[0] =~ /^-/) and $_ = shift) {
+    my($car, $cdr);
     next unless ($car, $cdr) = /^-?(.)(.*)/;
     if (/-rcs$/) { $rcs++; next; }
     if (/-cdif$/) { $diff = 'cdif'; next; }
@@ -69,22 +107,34 @@ while ($_ = $ARGV[0], /^-/ && shift) {
     if ($car eq 'H') { exec "nroff -man $0|".($ENV{'PAGER'}||'more')." -s"; }
     if ($car eq 'r') {
 	&usage("$_: Too many revisions\n") if (@rcs == 2);
-	$rcs++; push(@rcs, $_); next;
+	$rcs++;
+	push @rcs, $_;
+	next;
     }
     if ($car eq 'w') {
-	if ($cdr =~ /^\d+$/) { $screen_width = $cdr; next; }
-	if ($ARGV[$[] =~ /^\d+$/) { $screen_width = shift; next; }
+	if ($cdr =~ /^\d+$/) {
+	    $screen_width = $cdr;
+	    next;
+	}
+	if (@ARGV and $ARGV[0] =~ /^\d+$/) {
+	    $screen_width = shift;
+	    next;
+	}
     }
     if (s/^-?([cu]\d+)//) {
-	push(@diffopts, "-$1"); eval "\$opt_$car++"; redo;
+	push(@diffopts, "-$1");
+	eval "\$opt_$car++";
+	redo;
     }
     push(@diffopts, "-$car") if index("cbiwuB", $car) >= $[;
-    if (index($opts, "$car:") >= $[) {
+    if (index($opts, "$car:") >= 0) {
 	eval "\$opt_$car = length(\$cdr) ? \$cdr : \@ARGV ? shift : &usage";
 	next;
     }
-    if (index($opts, $car) >= $[) {
-	eval "\$opt_$car++"; $_ = $cdr; redo;
+    if (index($opts, $car) >= 0) {
+	eval "\$opt_$car++";
+	$_ = $cdr;
+	redo;
     }
     &usage("Unknown option: $car\n\n");
 }
@@ -94,11 +144,12 @@ push(@rcsopts, '-q') if $opt_q;
 $diff = $rcs ? 'rcsdiff' : 'diff' unless $diff;
 $diff .= ' -rcs' if $rcs && $diff eq 'cdif';
 
+my($OLD, $NEW, $DIFF);
 if ($rcs) {
     $rcsfile = shift || &usage("No RCS filename\n\n");
     $DIFF = "$diff @diffopts @rcsopts @rcs $rcsfile |";
-    $OLD = "co @rcsopts -p " . $rcs[0] . " $rcsfile|";
-    $NEW = @rcs > 1 ? "co @rcsopts -p " . $rcs[1] . " $rcsfile|" : $rcsfile;
+    $OLD = join ' ', "co @rcsopts -p ", @rcs ? ($rcs[0]) : (), " $rcsfile |";
+    $NEW = @rcs > 1 ? "co @rcsopts -p " . $rcs[1] . " $rcsfile |" : $rcsfile;
 } elsif (@ARGV == 2) {
     ($OLD, $NEW) = @ARGV;
     $DIFF = "$diff @diffopts $OLD $NEW |";
@@ -117,7 +168,7 @@ sub usage {
     exit;
 }
 
-$screen_width = &getwidth unless defined($screen_width);
+$screen_width = &terminal_width unless defined($screen_width);
 $width = int(($screen_width - 5) / 2);
 
 if ($opt_d) {
@@ -127,42 +178,49 @@ if ($opt_d) {
 }
 
 if ($readfile) {
-    open(OLD) || die "$OLD: $!\n";
-    open(NEW) || die "$NEW: $!\n";
+    open(OLD, $OLD) || die "$OLD: $!\n";
+    open(NEW, $NEW) || die "$NEW: $!\n";
 }
-open(DIFF) || die "cannot open diff: $!\n";
+open(DIFF, $DIFF) || die "cannot open diff: $!\n";
 
-$nformat = '%-4d %s';
-for (0..7) { $tab[$_] = ' ' x (8 - $_); }
-$markwidth = 2;
-$oline = $nline = 1;
+my $nformat = '%-4d %s';
+my @tab = map { ' ' x (8 - $_) } 0..7;
+my $markwidth = 2;
+my $oline = 1;
+my $nline = 1;
 
+my $cdif;
+my @old;
+my @new;
 DIFF: while (<DIFF>) {
     @old = @new = ();
+    my($left, $ctrl, $right);
     #
     # normal diff
     #
     if (($left, $ctrl, $right) = /([\d,]+)([adc])([\d,]+)/) {
 	$markwidth = 2;
-	($l1, $l2) = &range($left);
-	($r1, $r2) = &range($right);
+	my($l1, $l2) = &range($left);
+	my($r1, $r2) = &range($right);
 	if ($readfile) {
-	    $identical_line = $l1 - $oline + 1 - ($ctrl ne 'a');
+	    my $identical_line = $l1 - $oline + 1 - ($ctrl ne 'a');
 	    &print_identical($identical_line);
 	}
 	print if $opt_d || $opt_s;
 	if ($ctrl eq 'd' || $ctrl eq 'c') {
-	    $oline = $left;
-	    @old = &read(DIFF, $n = $l2 - $l1 + 1);
-	    &read(OLD, $n) if $readfile;
+	    ($oline) = $left =~ /^(\d+)/;
+	    my $n = $l2 - $l1 + 1;
+	    @old = &read(*DIFF, $n);
+	    &read(*OLD, $n) if $readfile;
 	}
-	&read(DIFF, 1) if $ctrl eq 'c';
+	&read(*DIFF, 1) if $ctrl eq 'c';
 	if ($ctrl eq 'a' || $ctrl eq 'c') {
-	    $nline = $right;
-	    @new = &read(DIFF, $n = $r2 - $r1 + 1);
-	    &read(NEW, $n) if $readfile;
+	    ($nline) = $right =~ /^(\d+)/;
+	    my $n = $r2 - $r1 + 1;
+	    @new = &read(*DIFF, $n);
+	    &read(*NEW, $n) if $readfile;
 	}
-	&flush;
+	&flush(\@old, \@new);
     }
     #
     # context diff
@@ -173,22 +231,28 @@ DIFF: while (<DIFF>) {
     }
     elsif ($cdif = ($_ eq "***************\n")) {
 	&out($_, ' ', $_, 1);
-	$ohead = $_ = <DIFF>;
-	print, next unless ($left) = /^\*\*\* ([\d,]+) \*\*\*\*$/;
-	$nhead = $_ = <DIFF>;
+	my $ohead = $_ = <DIFF>;
+	unless (($left) = /^\*\*\* ([\d,]+) \*\*\*\*$/) {
+	    print;
+	    next;
+	}
+	my $nhead = $_ = <DIFF>;
 	unless (($right) = /^--- ([\d,]+) ----$/) {
-	    @old = &read(DIFF, &range($left) - 1, $nhead);
+	    @old = &read(*DIFF, &range($left) - 1, $nhead);
 	    $nhead = $_ = <DIFF>;
 	    unless (($right) = /^--- ([\d,]+) ----$/) {
-		print $ohead, @old, $_; next;
+		print $ohead, @old, $_;
+		next;
 	    }
 	}
+	my $redo;
 	unless ($redo = (($_ = <DIFF>) !~ /^[\+\-\! ]/)) {
-	    @new = &read(DIFF, scalar(&range($right)) - 1, $_);
+	    @new = &read(*DIFF, scalar(&range($right)) - 1, $_);
 	}
 	&out($ohead, ' ', $nhead, 1) unless $opt_n;
-	($oline, $nline) = ($left, $right);
-	&flush;
+	($oline) = $left =~ /^(\d+)/;
+	($nline) = $right =~ /^(\d+)/;
+	&flush(\@old, \@new);
 	redo if $redo;
     }
     #
@@ -204,42 +268,45 @@ DIFF: while (<DIFF>) {
 	while (<DIFF>) {
 	    push(@old, $_), next if /^\-/;
 	    push(@new, $_), next if /^\+/;
-	    &flush();
+	    &flush(\@old, \@new);
 	    redo DIFF unless /^ /;
 	    s/^.// unless $opt_m;
 	    &out($_, ' ', $_);
 	    $oline++; $nline++;
 	}
-	&flush;
+	&flush(\@old, \@new);
     }
     else {
 	print;
     }
 }
 close(DIFF);
-$exit = $? >> 8;
+my $exit = $? >> 8;
 if ($readfile) {
     &print_identical(-1) if $exit < 2;
-    close(OLD);
-    close(NEW);
+    close OLD;
+    close NEW;
 }
 exit($exit == 2);
 
 ######################################################################
 
 sub flush {
+    local(*old, *new);
+    (*old, *new) = @_;
     while (@old || @new) {
-	$old = $new = undef;
-	if    ($cdif && $old[0] =~ /^\-/) { $old = shift(@old); }
-	elsif ($cdif && $new[0] =~ /^\+/) { $new = shift(@new); }
+	my($old, $new);
+	if    ($cdif and @old and $old[0] =~ /^\-/) { $old = shift @old; }
+	elsif ($cdif and @new and $new[0] =~ /^\+/) { $new = shift @new; }
 	else {
-	    $old = shift(@old) if $old[0] =~ /^[\-\!\<]/;
-	    $new = shift(@new) if $new[0] =~ /^[\+\!\>]/;
+	    $old = shift @old if @old and $old[0] =~ /^[\-\!\<]/;
+	    $new = shift @new if @new and $new[0] =~ /^[\+\!\>]/;
 	}
+	my $mark;
 	if ($old || $new) {
 	    $mark = $old ? $new ? '|' : '<' : '>';
 	} else {
-	    ($old, $new) = (shift(@old), shift(@new));
+	    ($old, $new) = (shift @old, shift @new);
 	    ($old, $new) = ($old || $new, $new || $old);
 	    $mark = ' ';
 	}
@@ -248,15 +315,16 @@ sub flush {
 	    substr($new, 0, $markwidth) = '' if $new;
 	}
 	&out($old, $mark, $new);
-	$oline += defined($old);
-	$nline += defined($new);
+	$oline++ if defined $old;
+	$nline++ if defined $new;
     }
 }
 
 sub print_identical {
-    local($n, $old, $new) = @_;
+    my $n = shift;
     while ($n--) {
-	$old = <OLD>; $new = <NEW>;
+	my $old = <OLD>;
+	my $new = <NEW>;
 	last if !defined($old) && !defined($new);
 	$old =~ s/^/  /, $new =~ s/^/  / if $opt_m;
 	if ($opt_l) {
@@ -270,46 +338,49 @@ sub print_identical {
 }
 
 sub out {
-    local($old, $mark, $new, $noline) = @_;
+    my($old, $mark, $new, $noline) = @_;
     if ($opt_1) {
 	print $old if defined($old); return;
     } elsif ($opt_2) {
 	print $new if defined($new); return;
     }
-    local($o, $n);
-    local($ocont, $ncont, $contmark) = (' ', ' ', '+');
-    if (defined($old)) {
+    my($o, $n);
+    my($ocont, $ncont, $contmark) = (' ', ' ', '+');
+    if (defined $old) {
 	($old = &expand($old)) =~ s/\n$//;
 	$old = &num($oline, $old) if $opt_n && !$noline;
     }
-    if (defined($new)) {
+    if (defined $new) {
 	($new = &expand($new)) =~ s/\n$//;
 	$new = &num($nline, $new) if $opt_n && !$noline;
     }
     while (1) {
-	($o, $old) = &fold($old, $width, 1, $opt_F);
-	($n, $new) = &fold($new, $width, 0, $opt_F);
+	($o, $old) = &fold($old // "", $width, 1, $opt_F);
+	($n, $new) = &fold($new // "", $width, 0, $opt_F);
 	print $o, ' ', $ocont, $mark, $ncont, ' ', $n, "\n";
 	last if !$opt_f || ($old eq '' && $new eq '');
 	if ($opt_n) {
-	    $old = ' ' x 5 . $old if length($old);
-	    $new = ' ' x 5 . $new if length($new);
+	    $old = ' ' x 5 . $old if length $old;
+	    $new = ' ' x 5 . $new if length $new;
 	} else {
-	    $ocont = length($old) ? $contmark : ' ';
-	    $ncont = length($new) ? $contmark : ' ';
+	    $ocont = length $old ? $contmark : ' ';
+	    $ncont = length $new ? $contmark : ' ';
 	}
     }
 }
 
 sub fold {
-    local($_, $width, $pad, $byword) = @_;
-    local($l, $room) = ('', $width);
-    local($n, $c, $r, $mb);
+    my($line, $width, $pad, $byword) = @_;
+    my($l, $room) = ('', $width);
+    my($n, $c, $r, $mb);
 
+    local $_ = $line;
     while (length) {
 	$c = '';
-	if (s/^\cH//) {
-	    $room < $width && $room++; $c = "\cH"; next;
+	if (s/^(\cH)//) {
+	    $c = $1;
+	    $room < $width && $room++;
+	    next;
 	}
 	if (s/^\r//) {
 	    if (length) {
@@ -318,27 +389,24 @@ sub fold {
 	    }
 	    next;
 	}
-	last if $room == 0 || (/^[\200-\377]/ && $room < 2);
-	if (($mb = s/^(([\200-\377].)+)//) || s/([^\b\r\200-\377]+)//) {
-	    $n = $room;
-	    if ($mb) {
-		$n -= $room % 2;
+	last if $room < 1 || (/^\p{InFullwidth}/ && $room < 2);
+	if (($mb = s/^([\p{InFullwidth}]+)//) || s/^([^\b\r\p{InFullwidth}]+)//) {
+	    my $string = $1;
+	    my $chars = $mb ? int $room / 2 : $room;
+	    $c = substr($string, 0, $chars);
+	    substr($string, 0, $chars) = '';
+	    if (length $string) {
+		$_ = $string . $_;
 	    }
-	    ($c, $r) = unpack("a$n a*", $1);
-	    $room -= length($c);
-	    $_ = $r . $_;
+	    $room -= mbwidth($c);
 	} else {
-	    die "$sdif: panic";
+	    die "$sdif: panic ($_)";
 	}
     } continue {
 	$l .= $c;
     }
-    if ($byword && /^\w/ && !$mb && $l =~ s/([^\w\b])([\w\b]+)$/\1/) {
-	$cut = $2;
-	if ($l =~ /[\200-\377]$/) { # This check is not necessary for EUC
-	    local(@tmp) = $l =~ /[\200-\377]?./g;
-	    pop(@tmp) =~ /^[\200-\377]$/ && ($cut =~ s/^(.)//) && ($l .= $1);
-	}
+    if ($byword && /^\w/ && !$mb && $l =~ s/([^\w\b])([\w\b]+)$/$1/) {
+	my $cut = $2;
 	$_ = $cut . $_;
 	$room += &pwidth($cut) if $pad;
     }
@@ -347,56 +415,55 @@ sub fold {
 }
 
 sub read {
-    local($FH, $c, @buf) = (@_);
-    push(@buf, scalar(<$FH>)) while $c--;
-    wantarray ? @buf : join('', @buf);
+    local *FH = shift;
+    my $c = shift;
+    my @buf = @_;
+    while ($c--) {
+	push @buf, scalar <FH>;
+    }
+    wantarray ? @buf : join '', @buf;
 }
 
 sub range {
-    local($_, $from, $to) = @_;
-    ($from, $to) = /,/ ? split(/,/) : ($_, $_);
+    local $_ = shift;
+    my($from, $to) = /,/ ? split(/,/) : ($_, $_);
     wantarray ? ($from, $to) : $to - $from + 1;
 }
 
 sub num {
-    local($num, $_) = @_;
-    sprintf($nformat, $num, $_);
+    my($num, $text) = @_;
+    sprintf($nformat, $num, $text);
 }
 
 sub expand {
-    local($_, $t) = @_;
-    if (($test || (($test = '10') =~ s/0/$`/, $test)) eq '11') {
-	1 while s/\t/$tab[&pwidth($`) % 8]/e;
-    } else {
-	substr($_, $t, 1) = $tab[$t % 8] while(($t = index($_, "\t")) >= $[);
-    }
+    local $_ = shift;
+    1 while s/^([^\t]*)\t/$tab[&pwidth($1) % 8]/e;
     $_;
 }
 
 sub pwidth {
-    local($_) = @_;
+    local $_ = shift;
     substr($_, 0, $markwidth) = '' if $opt_m;
-    return(length) unless /[\033\010\f\r]/;
-    s/^.*[\f\r]//;
-    s/\033\$[\@B]|\033\([JB]//g;
-    1 while s/[^\010]\010//;
-    s/^\010+//;
-    length($_);
-}
-
-# taken from Tom Christiansen's checknews script
-sub getwidth {
-    local($rows, $cols, $xpixel, $ypixel);
-    $TIOCGWINSZ = 0x40087468;  # should be require sys/ioctl.pl
-    if (ioctl(STDERR, $TIOCGWINSZ, $winsize)) {
-	($rows, $cols, $xpixel, $ypixel) = unpack('S4', $winsize);
+    if (/[\010\f\r]/) {
+	s/^.*[\f\r]//;
+	1 while s/[^\010]\010//;
+	s/^\010+//;
     }
-    $cols = 80 unless $cols;
-    $cols - 1;
+    mbwidth($_);
 }
 
-sub max { $_[ ($_[$[] < $_[$[+1]) + $[ ]; }
-sub min { $_[ ($_[$[] > $_[$[+1]) + $[ ]; }
+sub terminal_width {
+    my $width = 80;
+    if (-t STDERR) {
+	my $stty = `stty -f /dev/stderr all`; # XXX too easy...
+	if ($stty =~ /(\d+) +columns/) {
+	    $width = $1;
+	}
+    }
+    $width;
+}
+
+__END__
 
 ######################################################################
 .00 ;			# finish .ig
@@ -408,7 +475,7 @@ sub min { $_[ ($_[$[] > $_[$[+1]) + $[ ]; }
 .de XX
 .ds XX \\$4\ (v\\$3)
 ..
-.XX $Id: sdif,v 1.19 2005/01/16 02:20:24 utashiro Exp $
+.XX $Id: sdif,v 2.1 2014/01/18 06:20:05 utashiro Exp $
 .TH SDIF 1 \*(XX
 .SH NAME
 sdif \- sdiff clone
@@ -515,35 +582,10 @@ Only old file is printed when option \-1 is supplied and
 only new file with \-2 option.  These are almost useless
 with normal diff because ``sdif -1 A B'' is equivalent to
 ``cat A'', but probably make some sense with \-cdif option.
-.SH RELATED COMMANDS
-.IP a2ps
-is a command which converts ascii text to postscript
-program.  C version was originally posted to usenet by
-miguel@imag.imag.fr (Miguel Santana).  I reimplemented it by
-perl and enhanced to use different font family for
-overstruck and underlined characters.  This is a convenient
-tool to print the output from sdif to postscript printer.
-.IP cdif
-is a program which post-processes normal diff output and
-highlights deleted, changed and added word on modified line.
-It uses overstiking to highlighting.  Sdif can handle there
-sequence correctly.  Cdif has to be installed to use \-cdif
-option with sdif.
-.PP
-Next is a example that I'm using often.
-.nf
-
-	sdif -cdif -w180 file1 file2 | a2ps -w
-
-.fi
-.PP
-All of these programs can be ftp'ed from ftp.sra.co.jp by
-anonymous ftp from the directory
-\fIpub/lang/perl/sra-scripts\fP.
 .SH AUTHOR
 .nf
-Kazumasa Utashiro <utashiro@srekcah.org>
+Kazumasa Utashiro
 .fi
 .SH "SEE ALSO"
-perl(1), diff(1), cdif(1), a2ps(1)
+perl(1), diff(1), cdif(1)
 .ex
