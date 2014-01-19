@@ -3,12 +3,10 @@
 'ds 00 \"';
 'ig 00 ';
 
-use utf8;
 use strict;
 use warnings;
+use utf8;
 use List::Util;
-use Text::MBPrintf qw(mbwidth $wchar_re);
-use Unicode::EastAsianWidth;
 
 ;#
 ;# sdif: sdiff clone
@@ -261,7 +259,7 @@ DIFF: while (<DIFF>) {
     elsif (/^--- /) {
 	&out($_, ' ', scalar(<DIFF>), 1);
     }
-    elsif (/^\@\@ -(\d+)(,\d+)? \+(\d+)(,\d+)? \@\@$/) {
+    elsif (/^\@\@ -(\d+)(,\d+)? \+(\d+)(,\d+)? \@\@/) {
 	($oline, $nline) = ($1, $3);
 	$markwidth = 1;
 	&out($_, ' ', $_, 1);
@@ -355,8 +353,8 @@ sub out {
 	$new = &num($nline, $new) if $opt_n && !$noline;
     }
     while (1) {
-	($o, $old) = &fold($old // "", $width, 1, $opt_F);
-	($n, $new) = &fold($new // "", $width, 0, $opt_F);
+	($o, $old) = fold($old // "", $width, onword => $opt_F, pad => 1);
+	($n, $new) = fold($new // "", $width, onword => $opt_F);
 	print $o, ' ', $ocont, $mark, $ncont, ' ', $n, "\n";
 	last if !$opt_f || ($old eq '' && $new eq '');
 	if ($opt_n) {
@@ -369,49 +367,51 @@ sub out {
     }
 }
 
-sub fold {
-    my($line, $width, $pad, $byword) = @_;
-    my($l, $room) = ('', $width);
-    my($n, $c, $r, $mb);
+my $wchars;
+my $_a_zA_Z0_9;
+BEGIN {
+    my $wide      = '\p{East_Asian_Width=Wide}';
+    my $fullwidth = '\p{East_Asian_Width=FullWidth}';
+    my $ambiguous = '\p{East_Asian_Width=Ambiguous}';
+    $wchars = "${wide}${fullwidth}";
+    $_a_zA_Z0_9 = "_a-zA-Z0-9";
+}
 
-    local $_ = $line;
+sub fold {
+    local $_ = shift;
+    my $width = shift;
+    my %opt = @_ ? @_ : {};
+
+    my $cut = '';
+    my $folded = '';
+    my $room = $width;
     while (length) {
-	$c = '';
-	if (s/^(\cH)//) {
-	    $c = $1;
-	    $room < $width && $room++;
-	    next;
-	}
-	if (s/^\r//) {
-	    if (length) {
-		$c = "\cH" x ($width - $room - $opt_n * 5);
-		$room = $width - $opt_n * 5;
-	    }
-	    next;
-	}
-	last if $room < 1 || (/^\p{InFullwidth}/ && $room < 2);
-	if (($mb = s/^([\p{InFullwidth}]+)//) || s/^([^\b\r\p{InFullwidth}]+)//) {
+	last if $room < 1 or (/^[$wchars]/o && $room < 2);
+	if (my $mb = s/^([$wchars]+)//o or s/^([^$wchars]+)//o) {
 	    my $string = $1;
 	    my $chars = $mb ? int $room / 2 : $room;
-	    $c = substr($string, 0, $chars);
-	    substr($string, 0, $chars) = '';
-	    if (length $string) {
-		$_ = $string . $_;
-	    }
-	    $room -= mbwidth($c);
+	    $cut = substr($string, 0, $chars, "");
+	    $_ = $string . $_ if length $string;
+	    $room -= mbwidth($cut);
 	} else {
-	    die "$sdif: panic ($_)";
+	    die "panic ($_)";
 	}
     } continue {
-	$l .= $c;
+	$folded .= $cut;
+	$cut = '';
     }
-    if ($byword && /^\w/ && !$mb && $l =~ s/([^\w\b])([\w\b]+)$/$1/) {
-	my $cut = $2;
+
+    if ($opt{onword}
+	and /^[$_a_zA_Z0_9]/o
+	and $folded =~ s/(?<=[^$_a_zA_Z0_9])([$_a_zA_Z0_9]+)$//o) {
+	$cut = $1;
 	$_ = $cut . $_;
-	$room += &pwidth($cut) if $pad;
+	$room += length($cut) if $opt{pad};
     }
-    $l .= ' ' x $room if $pad;
-    ($l, $_);
+
+    $folded .= ' ' x $room if $opt{pad};
+
+    ($folded, $_);
 }
 
 sub read {
@@ -443,13 +443,22 @@ sub expand {
 
 sub pwidth {
     local $_ = shift;
-    substr($_, 0, $markwidth) = '' if $opt_m;
+    substr($_, 0, $markwidth, '') if $opt_m;
     if (/[\010\f\r]/) {
 	s/^.*[\f\r]//;
 	1 while s/[^\010]\010//;
 	s/^\010+//;
     }
-    mbwidth($_);
+    /[$wchars]/o ? mbwidth($_) : length($_);
+}
+
+sub mbwidth {
+    my $arg = shift;
+    my $len = length $arg;
+    while ($arg =~ m/([$wchars]+)/go) {
+	$len += length $1;
+    }
+    $len;
 }
 
 sub terminal_width {
