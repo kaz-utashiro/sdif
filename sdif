@@ -147,7 +147,7 @@ my($OLD, $NEW, $DIFF);
 if ($rcs) {
     $rcsfile = shift || &usage("No RCS filename\n\n");
     $DIFF = "$diff @diffopts @rcsopts @rcs $rcsfile |";
-    $OLD = join ' ', "co @rcsopts -p ", @rcs ? ($rcs[0]) : (), " $rcsfile |";
+    $OLD = join ' ', "co @rcsopts -p", @rcs ? ($rcs[0]) : (), "$rcsfile |";
     $NEW = @rcs > 1 ? "co @rcsopts -p " . $rcs[1] . " $rcsfile |" : $rcsfile;
 } elsif (@ARGV == 2) {
     ($OLD, $NEW) = @ARGV;
@@ -181,26 +181,31 @@ if ($readfile) {
     open(NEW, $NEW) || die "$NEW: $!\n";
 }
 
-open(DIFF, $DIFF) || die "cannot open diff: $!\n";
-
 if ($opt_cdif) {
-    local *CDIF;
-    my $pid = open CDIF, '-|';
-    if ($pid == 0) {
-	if (open STDIN, "<&DIFF") {
-	    close CDIF;
-	    close DIFF;
-	    exec qw"cdif --nocc --nomc";
+    my $pid = open DIFF, '-|';
+    if (not defined $pid) {
+	die "$!" if not defined $pid;
+    }
+    ##
+    ## child
+    ##
+    elsif ($pid == 0) {
+	if ($DIFF ne '-') {
+	    open(STDIN, $DIFF) || die "cannot open diff: $!\n";
 	}
-	warn "open or exec failed: $!";
+	do { exec qw"cdif --nocc --nomc" } ;
+	warn "exec failed: $!";
 	print while <>;
 	exit;
     }
-    elsif ($pid > 0) {
-	close DIFF;
-	open DIFF, "<&CDIF" or die;
-	close CDIF;
+    ##
+    ## parent
+    ##
+    else {
+	## do nothing;
     }
+} else {
+    open(DIFF, $DIFF) || die "cannot open diff: $!\n";
 }
 
 my $nwidth = 4;
@@ -209,11 +214,10 @@ my $markwidth = 2;
 my $oline = 1;
 my $nline = 1;
 
-my @old;
-my @new;
 my $diff_c;
 DIFF: while (<DIFF>) {
-    @old = @new = ();
+    my @old;
+    my @new;
     my($left, $ctrl, $right);
     #
     # normal diff
@@ -357,7 +361,7 @@ sub print_identical {
     while ($n--) {
 	my $old = <OLD>;
 	my $new = <NEW>;
-	last if !defined($old) && !defined($new);
+	defined $old or defined $new or last;
 	$old =~ s/^/  /, $new =~ s/^/  / if $opt_m;
 	if ($opt_l) {
 	    print linenum($oline) if $opt_n;
@@ -508,6 +512,7 @@ sub read_line {
     my $c = shift;
     my @buf = @_;
     while ($c--) {
+	last if eof FH;
 	push @buf, scalar <FH>;
     }
     wantarray ? @buf : join '', @buf;
