@@ -6,7 +6,8 @@
 use strict;
 use warnings;
 use utf8;
-use List::Util;
+use List::Util qw(min max);
+use Carp;
 
 ;#
 ;# sdif: sdiff clone
@@ -14,7 +15,7 @@ use List::Util;
 ## Copyright (c) 1992-2014 Kazumasa Utashiro
 ;#
 ;# Original version on Jul 24 1991
-;; my $rcsid = q$Id: sdif,v 2.1 2014/01/18 06:20:05 utashiro Exp $;
+;; my $rcsid = q$Id: sdif,v 2.2 2014/01/19 14:50:28 utashiro Exp $;
 ;#
 ;# Redistribution for non-commercial purpose, with or without
 ;# modification, is granted as long as all copyright notices are
@@ -83,6 +84,7 @@ my $opt_b;
 my $opt_i;
 my $opt_u;
 my $opt_B;
+my $opt_cdif;
 
 my @diffopts;
 my @rcsopts;
@@ -92,14 +94,14 @@ my $rcsfile;
 my $diff;
 my $readfile;
 my $screen_width;
-my $width;
+my $column_width;
 
 my $opts = 'nlsfhqdxmF12'.'cbiwuB';
 while (@ARGV and ($ARGV[0] =~ /^-/) and $_ = shift) {
     my($car, $cdr);
     next unless ($car, $cdr) = /^-?(.)(.*)/;
     if (/-rcs$/) { $rcs++; next; }
-    if (/-cdif$/) { $diff = 'cdif'; next; }
+    if (/-cdif$/) { $opt_cdif = 1; next; }
     if (/-diff=(.+)$/) { $diff = $1; next; }
     if ($car eq 'h') { &usage; next; }
     if ($car eq 'H') { exec "nroff -man $0|".($ENV{'PAGER'}||'more')." -s"; }
@@ -140,7 +142,6 @@ while (@ARGV and ($ARGV[0] =~ /^-/) and $_ = shift) {
 $opt_f = 1 if $opt_F;
 push(@rcsopts, '-q') if $opt_q;
 $diff = $rcs ? 'rcsdiff' : 'diff' unless $diff;
-$diff .= ' -rcs' if $rcs && $diff eq 'cdif';
 
 my($OLD, $NEW, $DIFF);
 if ($rcs) {
@@ -166,8 +167,8 @@ sub usage {
     exit;
 }
 
-$screen_width = &terminal_width unless defined($screen_width);
-$width = int(($screen_width - 5) / 2);
+$screen_width = &terminal_width unless defined $screen_width;
+$column_width = max(1, int(($screen_width - 5) / 2));
 
 if ($opt_d) {
     print STDERR "\$OLD = $OLD\n";
@@ -179,10 +180,30 @@ if ($readfile) {
     open(OLD, $OLD) || die "$OLD: $!\n";
     open(NEW, $NEW) || die "$NEW: $!\n";
 }
+
 open(DIFF, $DIFF) || die "cannot open diff: $!\n";
 
-my $nformat = '%-4d %s';
-my @tab = map { ' ' x (8 - $_) } 0..7;
+if ($opt_cdif) {
+    local *CDIF;
+    my $pid = open(CDIF, '-|');
+    if ($pid == 0) {
+	if (open(STDIN, "<&DIFF")) {
+	    close CDIF;
+	    close DIFF;
+	    exec qw"cdif --nocc --nomc";
+	}
+	warn "open or exec failed: $!";
+	print while <>;
+	exit;
+    }
+    elsif ($pid > 0) {
+	close DIFF;
+	open(DIFF, "<&CDIF") or die;
+	close CDIF;
+    }
+}
+
+my $nformat = '%4d ';
 my $markwidth = 2;
 my $oline = 1;
 my $nline = 1;
@@ -202,7 +223,7 @@ DIFF: while (<DIFF>) {
 	my($r1, $r2) = &range($right);
 	if ($readfile) {
 	    my $identical_line = $l1 - $oline + 1 - ($ctrl ne 'a');
-	    &print_identical($identical_line);
+	    print_identical($identical_line);
 	}
 	print if $opt_d || $opt_s;
 	if ($ctrl eq 'd' || $ctrl eq 'c') {
@@ -224,11 +245,11 @@ DIFF: while (<DIFF>) {
     # context diff
     #
     elsif (/^\*\*\* /) {
-	&out($_, ' ', scalar(<DIFF>), 1);
+	&out($column_width, $_, ' ', scalar(<DIFF>), 1);
 	$markwidth = 2;
     }
     elsif ($cdif = ($_ eq "***************\n")) {
-	&out($_, ' ', $_, 1);
+	&out($column_width, $_, ' ', $_, 1);
 	my $ohead = $_ = <DIFF>;
 	unless (($left) = /^\*\*\* ([\d,]+) \*\*\*\*$/) {
 	    print;
@@ -247,7 +268,7 @@ DIFF: while (<DIFF>) {
 	unless ($redo = (($_ = <DIFF>) !~ /^[\+\-\! ]/)) {
 	    @new = &read(*DIFF, scalar(&range($right)) - 1, $_);
 	}
-	&out($ohead, ' ', $nhead, 1) unless $opt_n;
+	&out($column_width, $ohead, ' ', $nhead, 1) unless $opt_n;
 	($oline) = $left =~ /^(\d+)/;
 	($nline) = $right =~ /^(\d+)/;
 	&flush(\@old, \@new);
@@ -257,19 +278,19 @@ DIFF: while (<DIFF>) {
     # unified diff
     #
     elsif (/^--- /) {
-	&out($_, ' ', scalar(<DIFF>), 1);
+	&out($column_width, $_, ' ', scalar(<DIFF>), 1);
     }
     elsif (/^\@\@ -(\d+)(,\d+)? \+(\d+)(,\d+)? \@\@/) {
 	($oline, $nline) = ($1, $3);
 	$markwidth = 1;
-	&out($_, ' ', $_, 1);
+	&out($column_width, $_, ' ', $_, 1);
 	while (<DIFF>) {
 	    push(@old, $_), next if /^\-/;
 	    push(@new, $_), next if /^\+/;
 	    &flush(\@old, \@new);
 	    redo DIFF unless /^ /;
 	    s/^.// unless $opt_m;
-	    &out($_, ' ', $_);
+	    &out($column_width, $_, ' ', $_);
 	    $oline++; $nline++;
 	}
 	&flush(\@old, \@new);
@@ -281,7 +302,7 @@ DIFF: while (<DIFF>) {
 close(DIFF);
 my $exit = $? >> 8;
 if ($readfile) {
-    &print_identical(-1) if $exit < 2;
+    print_identical(-1) if $exit < 2;
     close OLD;
     close NEW;
 }
@@ -312,7 +333,7 @@ sub flush {
 	    substr($old, 0, $markwidth) = '' if $old;
 	    substr($new, 0, $markwidth) = '' if $new;
 	}
-	&out($old, $mark, $new);
+	&out($column_width, $old, $mark, $new);
 	$oline++ if defined $old;
 	$nline++ if defined $new;
     }
@@ -326,55 +347,74 @@ sub print_identical {
 	last if !defined($old) && !defined($new);
 	$old =~ s/^/  /, $new =~ s/^/  / if $opt_m;
 	if ($opt_l) {
-	    $old = &num($oline, &expand($old)) if $opt_n;
-	    print $old;
+	    print &num($oline) if $opt_n;
+	    print &tabexpand($old);
 	} else {
-	    &out($old, ' ', $new);
+	    &out($column_width, $old, ' ', $new);
 	}
 	$oline++; $nline++;
     }
 }
 
 sub out {
-    my($old, $mark, $new, $noline) = @_;
+    my($width, $old, $mark, $new, $noline) = @_;
     if ($opt_1) {
 	print $old if defined($old); return;
     } elsif ($opt_2) {
 	print $new if defined($new); return;
     }
-    my($o, $n);
-    my($ocont, $ncont, $contmark) = (' ', ' ', '+');
+    my($onum, $nnum) = ('', '');
+    my $printnum = ($opt_n && !$noline);
+    if ($printnum) {
+	$onum = ' ' x 5;
+	$nnum = ' ' x 5;
+	$width = max(1, $width - 5);
+    }
     if (defined $old) {
-	($old = &expand($old)) =~ s/\n$//;
-	$old = &num($oline, $old) if $opt_n && !$noline;
+	chomp $old;
+	$old = &tabexpand($old);
+	$onum = &num($oline) if $printnum;
     }
     if (defined $new) {
-	($new = &expand($new)) =~ s/\n$//;
-	$new = &num($nline, $new) if $opt_n && !$noline;
+	chomp $new;
+	$new = &tabexpand($new);
+	$nnum = &num($nline) if $printnum;
     }
+    my($o, $n);
+    my($ocont, $ncont, $contmark) = (' ', ' ', '+');
     while (1) {
 	($o, $old) = fold($old // "", $width, onword => $opt_F, pad => 1);
 	($n, $new) = fold($new // "", $width, onword => $opt_F);
-	print $o, ' ', $ocont, $mark, $ncont, ' ', $n, "\n";
+	print($onum, $o,
+	      ' ', $ocont, $mark, $ncont, ' ',
+	      $nnum, $n,
+	      "\n");
 	last if !$opt_f || ($old eq '' && $new eq '');
-	if ($opt_n) {
-	    $old = ' ' x 5 . $old if length $old;
-	    $new = ' ' x 5 . $new if length $new;
+	if ($printnum) {
+	    $onum = ' ' x 5;
+	    $nnum = ' ' x 5;
 	} else {
-	    $ocont = length $old ? $contmark : ' ';
-	    $ncont = length $new ? $contmark : ' ';
+	    $ocont = $contmark if $old ne '';
+	    $ncont = $contmark if $new ne '';
 	}
     }
 }
 
+use Term::ANSIColor qw(:constants);
+
 my $wchars;
 my $_a_zA_Z0_9;
+my $reset_re;
+my $color_re;
 BEGIN {
     my $wide      = '\p{East_Asian_Width=Wide}';
     my $fullwidth = '\p{East_Asian_Width=FullWidth}';
     my $ambiguous = '\p{East_Asian_Width=Ambiguous}';
     $wchars = "${wide}${fullwidth}";
     $_a_zA_Z0_9 = "_a-zA-Z0-9";
+    my $reset = RESET;
+    $reset_re = qr/\Q$reset/;
+    $color_re = qr/\e\[[\d;]*m/;
 }
 
 sub fold {
@@ -382,14 +422,35 @@ sub fold {
     my $width = shift;
     my %opt = @_ ? @_ : {};
 
+    $width < 1 and croak "width should be greater than 0";
+
     my $cut = '';
     my $folded = '';
     my $room = $width;
+    my @color_stack;
     while (length) {
-	last if $room < 1 or (/^[$wchars]/o && $room < 2);
-	if (my $mb = s/^([$wchars]+)//o or s/^([^$wchars]+)//o) {
+	last if $room < 1;
+	last if $room != $width and /^[$wchars]/o and $room < 2;
+
+	##
+	## Handle ANSI color sequences
+	##
+	if (s/^($reset_re)//) {
+	    $cut = $1;
+	    @color_stack = ();
+	    next;
+	}
+	if (s/^( (?: (?! $reset_re) $color_re )+ )//x) {
+	    $cut = $1;
+	    push @color_stack, $cut;
+	    next;
+	}
+
+	if (my $mb = s/^([$wchars]+)//o
+	    or s/^([^\e$wchars]+)//o
+	    or s/^(\e)//) {
 	    my $string = $1;
-	    my $chars = $mb ? int $room / 2 : $room;
+	    my $chars = $mb ? max(1, int $room / 2) : $room;
 	    $cut = substr($string, 0, $chars, "");
 	    $_ = $string . $_ if length $string;
 	    $room -= mbwidth($cut);
@@ -402,11 +463,26 @@ sub fold {
     }
 
     if ($opt{onword}
-	and /^[$_a_zA_Z0_9]/o
-	and $folded =~ s/(?<=[^$_a_zA_Z0_9])([$_a_zA_Z0_9]+)$//o) {
-	$cut = $1;
-	$_ = $cut . $_;
-	$room += length($cut) if $opt{pad};
+	and my($rear) = /^([$_a_zA_Z0_9]+)/o
+	and $folded =~ /(?<=[^$_a_zA_Z0_9])([$_a_zA_Z0_9]+)$/o) {
+	##
+	## Break line before word only when enough space will be
+	## provided for the word in next call.
+	##
+	my $tmp = $folded;
+	my $saved = $tmp =~ s/(.*$color_re)// ? $1 : "";
+	if ($tmp =~ s/([$_a_zA_Z0_9]+)$//o
+	    and length($1) + length($rear) <= $width) {
+	    $cut = $1;
+	    $_ = $cut . $_;
+	    $room += length($cut) if $opt{pad};
+	    $folded = $saved . $tmp;
+	}
+    }
+
+    if (@color_stack) {
+	$folded .= RESET;
+	$_ = (pop @color_stack) . $_;
     }
 
     $folded .= ' ' x $room if $opt{pad};
@@ -431,20 +507,24 @@ sub range {
 }
 
 sub num {
-    my($num, $text) = @_;
-    sprintf($nformat, $num, $text);
+    sprintf($nformat, @_);
 }
 
-sub expand {
+my @tabspace;
+BEGIN {
+    @tabspace = map { ' ' x (8 - $_) } 0..7;
+}
+sub tabexpand {
     local $_ = shift;
-    1 while s/^([^\t]*)\t/$tab[&pwidth($1) % 8]/e;
+    1 while s/^([^\t]*)\t/$1 . $tabspace[&pwidth($1) % 8]/e;
     $_;
 }
 
 sub pwidth {
     local $_ = shift;
     substr($_, 0, $markwidth, '') if $opt_m;
-    if (/[\010\f\r]/) {
+    if (/[\010\e\f\r]/) {
+	s/$color_re//g;
 	s/^.*[\f\r]//;
 	1 while s/[^\010]\010//;
 	s/^\010+//;
@@ -484,7 +564,7 @@ __END__
 .de XX
 .ds XX \\$4\ (v\\$3)
 ..
-.XX $Id: sdif,v 2.1 2014/01/18 06:20:05 utashiro Exp $
+.XX $Id: sdif,v 2.2 2014/01/19 14:50:28 utashiro Exp $
 .TH SDIF 1 \*(XX
 .SH NAME
 sdif \- sdiff clone
