@@ -218,7 +218,7 @@ DIFF: while (<DIFF>) {
     #
     # normal diff
     #
-    if (($left, $ctrl, $right) = /([\d,]+)([adc])([\d,]+)/) {
+    if (($left, $ctrl, $right) = /^([\d,]+)([adc])([\d,]+)$/) {
 	$markwidth = 2;
 	my($l1, $l2) = range($left);
 	my($r1, $r2) = range($right);
