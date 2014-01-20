@@ -9,33 +9,33 @@ use utf8;
 use List::Util qw(min max);
 use Carp;
 
-;#
-;# sdif: sdiff clone
-;#
+##
+## sdif: sdiff clone
+##
 ## Copyright (c) 1992-2014 Kazumasa Utashiro
-;#
-;# Original version on Jul 24 1991
+##
+## Original version on Jul 24 1991
 ;; my $rcsid = q$Id: sdif,v 2.2 2014/01/19 14:50:28 utashiro Exp $;
-;#
-;# Redistribution for non-commercial purpose, with or without
-;# modification, is granted as long as all copyright notices are
-;# retained.  THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND
-;# ANY EXPRESS OR IMPLIED WARRANTIES ARE DISCLAIMED.
-;#
-;# Incompatibility:
-;#	- has -n option for numbering
-;#	- has -f option for folding
-;#	- has -F option for word boundary folding
-;#	- has -c option for context diff
-;#	- has -m option to keep diff mark
-;#	- handle backspace and carriage return
-;#	- no -o option
-;#	- all tabs are expanded
-;#	- default width is 80
-;#	- rcs support
-;#	- cdif (word context diff) support
-;#	- read diff data from file or stdin
-;#
+##
+## Redistribution for non-commercial purpose, with or without
+## modification, is granted as long as all copyright notices are
+## retained.  THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND
+## ANY EXPRESS OR IMPLIED WARRANTIES ARE DISCLAIMED.
+##
+## Incompatibility:
+##	- has -n option for numbering
+##	- has -f option for folding
+##	- has -F option for word boundary folding
+##	- has -c option for context diff
+##	- has -m option to keep diff mark
+##	- handle backspace and carriage return
+##	- no -o option
+##	- all tabs are expanded
+##	- default width is 80
+##	- rcs support
+##	- cdif (word context diff) support
+##	- read diff data from file or stdin
+##
 my $sdif = $0 =~ m|/([^/]+)$| ? $1 : 'sdif';
 my $usage = <<EOS;
 Usage: $sdif [-n] [-l] [-s] [-[fF]] [-b] [-i] [-w] [-w #] [-c] [file1 [file2]]
@@ -185,9 +185,9 @@ open(DIFF, $DIFF) || die "cannot open diff: $!\n";
 
 if ($opt_cdif) {
     local *CDIF;
-    my $pid = open(CDIF, '-|');
+    my $pid = open CDIF, '-|';
     if ($pid == 0) {
-	if (open(STDIN, "<&DIFF")) {
+	if (open STDIN, "<&DIFF") {
 	    close CDIF;
 	    close DIFF;
 	    exec qw"cdif --nocc --nomc";
@@ -198,19 +198,20 @@ if ($opt_cdif) {
     }
     elsif ($pid > 0) {
 	close DIFF;
-	open(DIFF, "<&CDIF") or die;
+	open DIFF, "<&CDIF" or die;
 	close CDIF;
     }
 }
 
-my $nformat = '%4d ';
+my $nwidth = 4;
+my $nformat = "%${nwidth}d ";
 my $markwidth = 2;
 my $oline = 1;
 my $nline = 1;
 
-my $cdif;
 my @old;
 my @new;
+my $diff_c;
 DIFF: while (<DIFF>) {
     @old = @new = ();
     my($left, $ctrl, $right);
@@ -219,8 +220,8 @@ DIFF: while (<DIFF>) {
     #
     if (($left, $ctrl, $right) = /([\d,]+)([adc])([\d,]+)/) {
 	$markwidth = 2;
-	my($l1, $l2) = &range($left);
-	my($r1, $r2) = &range($right);
+	my($l1, $l2) = range($left);
+	my($r1, $r2) = range($right);
 	if ($readfile) {
 	    my $identical_line = $l1 - $oline + 1 - ($ctrl ne 'a');
 	    print_identical($identical_line);
@@ -229,27 +230,27 @@ DIFF: while (<DIFF>) {
 	if ($ctrl eq 'd' || $ctrl eq 'c') {
 	    ($oline) = $left =~ /^(\d+)/;
 	    my $n = $l2 - $l1 + 1;
-	    @old = &read(*DIFF, $n);
-	    &read(*OLD, $n) if $readfile;
+	    @old = read_line(*DIFF, $n);
+	    read_line(*OLD, $n) if $readfile;
 	}
-	&read(*DIFF, 1) if $ctrl eq 'c';
+	read_line(*DIFF, 1) if $ctrl eq 'c';
 	if ($ctrl eq 'a' || $ctrl eq 'c') {
 	    ($nline) = $right =~ /^(\d+)/;
 	    my $n = $r2 - $r1 + 1;
-	    @new = &read(*DIFF, $n);
-	    &read(*NEW, $n) if $readfile;
+	    @new = read_line(*DIFF, $n);
+	    read_line(*NEW, $n) if $readfile;
 	}
-	&flush(\@old, \@new);
+	flush_buffer(\@old, \@new);
     }
     #
     # context diff
     #
     elsif (/^\*\*\* /) {
-	&out($column_width, $_, ' ', scalar(<DIFF>), 1);
+	print_column($column_width, $_, ' ', scalar(<DIFF>), 1);
 	$markwidth = 2;
     }
-    elsif ($cdif = ($_ eq "***************\n")) {
-	&out($column_width, $_, ' ', $_, 1);
+    elsif ($diff_c = ($_ eq "***************\n")) {
+	print_column($column_width, $_, ' ', $_, 1);
 	my $ohead = $_ = <DIFF>;
 	unless (($left) = /^\*\*\* ([\d,]+) \*\*\*\*$/) {
 	    print;
@@ -257,7 +258,7 @@ DIFF: while (<DIFF>) {
 	}
 	my $nhead = $_ = <DIFF>;
 	unless (($right) = /^--- ([\d,]+) ----$/) {
-	    @old = &read(*DIFF, &range($left) - 1, $nhead);
+	    @old = read_line(*DIFF, range($left) - 1, $nhead);
 	    $nhead = $_ = <DIFF>;
 	    unless (($right) = /^--- ([\d,]+) ----$/) {
 		print $ohead, @old, $_;
@@ -266,76 +267,88 @@ DIFF: while (<DIFF>) {
 	}
 	my $redo;
 	unless ($redo = (($_ = <DIFF>) !~ /^[\+\-\! ]/)) {
-	    @new = &read(*DIFF, scalar(&range($right)) - 1, $_);
+	    @new = read_line(*DIFF, scalar(range($right)) - 1, $_);
 	}
-	&out($column_width, $ohead, ' ', $nhead, 1) unless $opt_n;
+	print_column($column_width, $ohead, ' ', $nhead, 1) unless $opt_n;
 	($oline) = $left =~ /^(\d+)/;
 	($nline) = $right =~ /^(\d+)/;
-	&flush(\@old, \@new);
+	flush_buffer(\@old, \@new);
 	redo if $redo;
     }
     #
     # unified diff
     #
     elsif (/^--- /) {
-	&out($column_width, $_, ' ', scalar(<DIFF>), 1);
+	my $next = <DIFF>;
+	print_column($column_width, $_, ' ', $next, 1);
     }
     elsif (/^\@\@ -(\d+)(,\d+)? \+(\d+)(,\d+)? \@\@/) {
 	($oline, $nline) = ($1, $3);
 	$markwidth = 1;
-	&out($column_width, $_, ' ', $_, 1);
+	print_column($column_width, $_, ' ', $_, 1);
 	while (<DIFF>) {
 	    push(@old, $_), next if /^\-/;
 	    push(@new, $_), next if /^\+/;
-	    &flush(\@old, \@new);
+	    flush_buffer(\@old, \@new);
 	    redo DIFF unless /^ /;
 	    s/^.// unless $opt_m;
-	    &out($column_width, $_, ' ', $_);
-	    $oline++; $nline++;
+	    print_column($column_width, $_, ' ', $_);
+	    $oline++;
+	    $nline++;
 	}
-	&flush(\@old, \@new);
+	flush_buffer(\@old, \@new);
     }
     else {
 	print;
     }
 }
-close(DIFF);
+
+close DIFF;
 my $exit = $? >> 8;
+
 if ($readfile) {
-    print_identical(-1) if $exit < 2;
+    if ($exit < 2) {
+	print_identical(-1);
+    }
     close OLD;
     close NEW;
 }
+
 exit($exit == 2);
 
 ######################################################################
 
-sub flush {
-    local(*old, *new);
-    (*old, *new) = @_;
-    while (@old || @new) {
-	my($old, $new);
-	if    ($cdif and @old and $old[0] =~ /^\-/) { $old = shift @old; }
-	elsif ($cdif and @new and $new[0] =~ /^\+/) { $new = shift @new; }
+sub flush_buffer {
+    my @left = splice @{+shift}, 0;
+    my @right = splice @{+shift}, 0;
+
+    while (@left || @right) {
+	my($left, $right);
+	if ($diff_c and @left and $left[0] =~ /^\-/) {
+	    $left = shift @left;
+	}
+	elsif ($diff_c and @right and $right[0] =~ /^\+/) {
+	    $right = shift @right;
+	}
 	else {
-	    $old = shift @old if @old and $old[0] =~ /^[\-\!\<]/;
-	    $new = shift @new if @new and $new[0] =~ /^[\+\!\>]/;
+	    $left = shift @left if @left and $left[0] =~ /^[\-\!\<]/;
+	    $right = shift @right if @right and $right[0] =~ /^[\+\!\>]/;
 	}
 	my $mark;
-	if ($old || $new) {
-	    $mark = $old ? $new ? '|' : '<' : '>';
+	if ($left || $right) {
+	    $mark = $left ? $right ? '|' : '<' : '>';
 	} else {
-	    ($old, $new) = (shift @old, shift @new);
-	    ($old, $new) = ($old || $new, $new || $old);
+	    ($left, $right) = (shift @left, shift @right);
+	    ($left, $right) = ($left || $right, $right || $left);
 	    $mark = ' ';
 	}
 	unless ($opt_m) {
-	    substr($old, 0, $markwidth) = '' if $old;
-	    substr($new, 0, $markwidth) = '' if $new;
+	    substr($left, 0, $markwidth) = '' if $left;
+	    substr($right, 0, $markwidth) = '' if $right;
 	}
-	&out($column_width, $old, $mark, $new);
-	$oline++ if defined $old;
-	$nline++ if defined $new;
+	print_column($column_width, $left, $mark, $right);
+	$oline++ if defined $left;
+	$nline++ if defined $right;
     }
 }
 
@@ -347,16 +360,16 @@ sub print_identical {
 	last if !defined($old) && !defined($new);
 	$old =~ s/^/  /, $new =~ s/^/  / if $opt_m;
 	if ($opt_l) {
-	    print &num($oline) if $opt_n;
-	    print &tabexpand($old);
+	    print linenum($oline) if $opt_n;
+	    print expand_tab($old);
 	} else {
-	    &out($column_width, $old, ' ', $new);
+	    print_column($column_width, $old, ' ', $new);
 	}
 	$oline++; $nline++;
     }
 }
 
-sub out {
+sub print_column {
     my($width, $old, $mark, $new, $noline) = @_;
     if ($opt_1) {
 	print $old if defined($old); return;
@@ -372,13 +385,13 @@ sub out {
     }
     if (defined $old) {
 	chomp $old;
-	$old = &tabexpand($old);
-	$onum = &num($oline) if $printnum;
+	$old = expand_tab($old);
+	$onum = linenum($oline) if $printnum;
     }
     if (defined $new) {
 	chomp $new;
-	$new = &tabexpand($new);
-	$nnum = &num($nline) if $printnum;
+	$new = expand_tab($new);
+	$nnum = linenum($nline) if $printnum;
     }
     my($o, $n);
     my($ocont, $ncont, $contmark) = (' ', ' ', '+');
@@ -440,7 +453,7 @@ sub fold {
 	    @color_stack = ();
 	    next;
 	}
-	if (s/^( (?: (?! $reset_re) $color_re )+ )//x) {
+	if (s/^($color_re)//) {
 	    $cut = $1;
 	    push @color_stack, $cut;
 	    next;
@@ -469,20 +482,20 @@ sub fold {
 	## Break line before word only when enough space will be
 	## provided for the word in next call.
 	##
-	my $tmp = $folded;
-	my $saved = $tmp =~ s/(.*$color_re)// ? $1 : "";
-	if ($tmp =~ s/([$_a_zA_Z0_9]+)$//o
+	my $copy = $folded;
+	my $saved = $copy =~ s/(.*$color_re)// ? $1 : "";
+	if ($copy =~ s/([$_a_zA_Z0_9]+)$//o
 	    and length($1) + length($rear) <= $width) {
 	    $cut = $1;
 	    $_ = $cut . $_;
 	    $room += length($cut) if $opt{pad};
-	    $folded = $saved . $tmp;
+	    $folded = $saved . $copy;
 	}
     }
 
     if (@color_stack) {
 	$folded .= RESET;
-	$_ = (pop @color_stack) . $_;
+	$_ = join '', @color_stack, $_;
     }
 
     $folded .= ' ' x $room if $opt{pad};
@@ -490,7 +503,7 @@ sub fold {
     ($folded, $_);
 }
 
-sub read {
+sub read_line {
     local *FH = shift;
     my $c = shift;
     my @buf = @_;
@@ -506,7 +519,7 @@ sub range {
     wantarray ? ($from, $to) : $to - $from + 1;
 }
 
-sub num {
+sub linenum {
     sprintf($nformat, @_);
 }
 
@@ -514,7 +527,7 @@ my @tabspace;
 BEGIN {
     @tabspace = map { ' ' x (8 - $_) } 0..7;
 }
-sub tabexpand {
+sub expand_tab {
     local $_ = shift;
     1 while s/^([^\t]*)\t/$1 . $tabspace[&pwidth($1) % 8]/e;
     $_;
