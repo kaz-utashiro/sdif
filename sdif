@@ -79,9 +79,10 @@ my $opt_c;
 my $opt_b;
 my $opt_i;
 my $opt_u;
-my $opt_B;
+my $opt_m;
 my $opt_cdif;
 my $opt_env;
+my $opt_test;
 
 my @colormap;
 my @diffopts;
@@ -106,6 +107,7 @@ if ($ENV{'SDIFOPTS'}) {
 }
 
 my @optargs = (
+    "test" => \$opt_test,
     "n" => \$opt_n,
     "l" => \$opt_l,
     "s" => \$opt_s,
@@ -115,7 +117,7 @@ my @optargs = (
     "2" => \$opt_2,
     "b" => \$opt_b,
     "i" => \$opt_i,
-    "B" => \$opt_B,
+    "m" => \$opt_m,
     "w=i" => \$opt_w,
 
     "d+" => \$opt_d,
@@ -239,7 +241,12 @@ DIFF: while (<DIFF>) {
 	    @new = read_line(*DIFF, $n);
 	    read_line(*NEW, $n) if $readfile;
 	}
-	flush_buffer(\@old, \@new);
+	if ($opt_test) {
+	    new_flush_buffer([], \@old, \@new);
+	}
+	else {
+	    flush_buffer(\@old, \@new);
+	}
     }
     #
     # context diff
@@ -271,7 +278,13 @@ DIFF: while (<DIFF>) {
 	print_column($column_width, $ohead, ' ', $nhead, 1) unless $opt_n;
 	($oline) = $left =~ /^(\d+)/;
 	($nline) = $right =~ /^(\d+)/;
-	flush_buffer(\@old, \@new);
+
+	my @buf = merge_diffc(\@old, \@new);
+	if ($opt_test) {
+	    new_flush_buffer(@buf);
+	} else {
+	    flush_buffer(\@old, \@new);
+	}
     }
     #
     # unified diff
@@ -289,17 +302,22 @@ DIFF: while (<DIFF>) {
 
 	my @buf = read_diffu(*DIFF, $a, $b);
 
-	while (my($same, $old, $new) = splice(@buf, 0, 3)) {
-	    for (@$same) {
-		s/^.//;
-		print_column($column_width, $_, ' ', $_);
-		$oline++;
-		$nline++
-	    }
-	    if ($old or $new) {
-		@old = $old ? @$old : ();
-		@new = $new ? @$new : ();
-		flush_buffer(\@old, \@new);
+	if ($opt_test) {
+	    new_flush_buffer(@buf);
+	}
+	else {
+	    while (my($same, $old, $new) = splice(@buf, 0, 3)) {
+		for (@$same) {
+		    s/^.//;
+		    print_column($column_width, $_, ' ', $_);
+		    $oline++;
+		    $nline++
+		}
+		if ($old or $new) {
+		    @old = $old ? @$old : ();
+		    @new = $new ? @$new : ();
+		    flush_buffer(\@old, \@new);
+		}
 	    }
 	}
     }
@@ -346,6 +364,43 @@ sub read_diffu {
     map { $_ // [] } @buf;
 }
 
+sub merge_diffc {
+    my @o = @{+shift};
+    my @n = @{+shift};
+    my @buf;
+
+    die if grep { not /^[ \-\+\!] / } @o, @n;
+
+    while (@o or @n) {
+	my @slot = ([], [], []);
+	push @buf, \@slot;
+
+	if (@o and @n) {
+	    while (@o and @n and $o[0] =~ /^  / and $n[0] =~ /^  /) {
+		push @{$slot[0]}, shift @o;
+		shift @n;
+	    }
+	}
+	elsif (@o) {
+	    push @{$slot[0]}, shift @o while (@o and $o[0] =~ /^  /);
+	}
+	elsif (@n) {
+	    push @{$slot[0]}, shift @n while (@n and $n[0] =~ /^  /);
+	}
+	    
+	push @{$slot[1]}, shift @o while (@o and $o[0] =~ /^- /);
+	next if @{$slot[1]};
+
+	push @{$slot[2]}, shift @n while (@n and $n[0] =~ /^\+ /);
+	next if @{$slot[2]};
+
+	push(@{$slot[1]}, shift @o) while (@o and $o[0] =~ /^! /);
+	push(@{$slot[2]}, shift @n) while (@n and $n[0] =~ /^! /);
+    }
+
+    map { @$_ } @buf;
+}
+
 sub flush_buffer {
     my @old = splice @{+shift}, 0;
     my @new = splice @{+shift}, 0;
@@ -373,13 +428,42 @@ sub flush_buffer {
 	    $mark = ' ';
 	}
 
-	trim_mark(\$old) if $old;
-	trim_mark(\$new) if $new;
+	trim_mark(\$old) if $old and not $opt_m;
+	trim_mark(\$new) if $new and not $opt_m;
 
 	print_column($column_width, $old, $mark, $new);
 
 	$oline++ if defined $old;
 	$nline++ if defined $new;
+    }
+}
+
+sub new_flush_buffer {
+
+    while (my($s, $o, $n) = splice(@_, 0, 3)) {
+	$o //= [];
+	$n //= [];
+
+	for (@$s) {
+	    trim_mark(\$_) if not $opt_m;
+	    print_column($column_width, $_, ' ', $_);
+	    $oline++;
+	    $nline++;
+	}
+
+	while (@$o or @$n) {
+	    my $old = shift @$o;
+	    my $new = shift @$n;
+	    my $mark = $old ? $new ? '|' : '<' : '>';
+
+	    trim_mark(\$old) if $old and not $opt_m;
+	    trim_mark(\$new) if $new and not $opt_m;
+
+	    print_column($column_width, $old, $mark, $new);
+
+	    $oline++ if defined $old;
+	    $nline++ if defined $new;
+	}
     }
 }
 
