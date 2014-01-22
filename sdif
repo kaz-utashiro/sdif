@@ -40,31 +40,35 @@ $Data::Dumper::Terse = 1;
 ##	- cdif (word context diff) support
 ##	- read diff data from file or stdin
 ##
-my $sdif = $0 =~ m|/([^/]+)$| ? $1 : 'sdif';
-my $usage = <<EOS;
-Usage: $sdif [-n] [-l] [-s] [-[fF]] [-b] [-i] [-w] [-w #] [-c] [file1 [file2]]
-       $sdif [-rcs] [-q] [-rrev1 [-rrev2]] [$sdif options] file
-Options:
+
+=pod
+
+=head1 NAME
+
+sdif - sdiff clone
+
+=head1 SYNOPSIS
+
+sdif
+[-n] [-l] [-s] [-[fF]] [-b] [-i] [-w] [-w width] [-c[line]]
+[-diff=command] [file1 [file2]]
+
+sdif
+[-rcs] [-q] [-rrev1 [-rrev2]] [sdif options] file
+
 	-n	print line number
 	-l	print left column only for identical line
 	-s	don't print identical line
 	-f	fold line instead of truncating
-		(folded line is marked by '+' character)
+		(folded line is marked by '.' character)
 	-F	fold line by word boundaries
 	-c[#]	do context diff
-	-b	ignore trailing blanks
-	-i	ignore the case of letters
-	-w	ignore all blanks
 	-w #	specify width of output (default is 80)
-	-m	leave diff marks
-	-cdif	use "cdif"
-	-rcs	compare rcs files
-		(not required when revision number is supplied)
-	-rrev	RCS revision number
-	-q	don't print rcs diagnostics
+	--cdif	use "cdif"
 	-1	print old file only
 	-2	print new file only
-EOS
+
+=cut
 
 my $opt_n;
 my $opt_l;
@@ -124,7 +128,7 @@ my @optargs = (
     "w=i" => \$opt_w,
 
     "d+" => \$opt_d,
-    "h|help" => sub { pod2usage() },
+    "h|help" => sub { usage() },
     "man" => sub { pod2usage({-verbose => 2}) },
 
     "env!" => \$opt_env,
@@ -144,7 +148,7 @@ my @optargs = (
 );
 
 Getopt::Long::Configure("bundling");
-GetOptions(@optargs) || pod2usage();
+GetOptions(@optargs) || usage();
 
 $opt_f = 1 if $opt_F;
 push(@rcsopts, '-q') if $opt_q;
@@ -152,7 +156,7 @@ $diff = $rcs ? 'rcsdiff' : 'diff' unless $diff;
 
 my($OLD, $NEW, $DIFF);
 if ($rcs) {
-    $rcsfile = shift || &usage("No RCS filename\n\n");
+    $rcsfile = shift || usage("No RCS filename\n\n");
     $DIFF = "$diff @diffopts @rcsopts @rcs $rcsfile |";
     $OLD = join ' ', "co @rcsopts -p", @rcs ? ($rcs[0]) : (), "$rcsfile |";
     $NEW = @rcs > 1 ? "co @rcsopts -p " . $rcs[1] . " $rcsfile |" : $rcsfile;
@@ -163,13 +167,14 @@ if ($rcs) {
     $DIFF = shift || '-';
     $opt_s++;
 } else {
-    &usage("Arguments error.\n\n");
+    usage("Arguments error.\n\n");
 }
 $readfile = $OLD && $NEW && !($opt_s || $opt_c || $opt_u);
 
 sub usage {
-    select(STDERR);
-    print @_, $usage;
+    select STDERR;
+    print @_;
+    pod2usage(-verbose => 0, -exitval => "NOEXIT");
     print "$rcsid\n" if $rcsid =~ /:/;
     exit;
 }
@@ -626,19 +631,6 @@ sub unesc {
 __END__
 
 =pod
-
-=head1 NAME
-
-sdif - sdiff clone
-
-=head1 SYNOPSIS
-
-sdif
-[-n] [-l] [-s] [-[fF]] [-b] [-i] [-w] [-w width] [-c[line]]
-[-diff=command] [file1 [file2]]
-
-sdif
-[-rcs] [-q] [-rrev1 [-rrev2]] [sdif options] file
 
 =head1 DESCRIPTION
 
