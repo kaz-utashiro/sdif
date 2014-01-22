@@ -79,7 +79,6 @@ my $opt_c;
 my $opt_b;
 my $opt_i;
 my $opt_u;
-my $opt_m;
 my $opt_cdif;
 my $opt_env;
 
@@ -115,7 +114,6 @@ my @optargs = (
     "2" => \$opt_2,
     "b" => \$opt_b,
     "i" => \$opt_i,
-    "m" => \$opt_m,
     "w=i" => \$opt_w,
 
     "d+" => \$opt_d,
@@ -230,15 +228,16 @@ DIFF: while (<DIFF>) {
 	    ($oline) = $left =~ /^(\d+)/;
 	    my $n = $l2 - $l1 + 1;
 	    @old = read_line(*DIFF, $n);
-	    read_line(*OLD, $n) if $readfile;
+	    $readfile and read_line(*OLD, $n);
 	}
 	read_line(*DIFF, 1) if $ctrl eq 'c';
 	if ($ctrl eq 'a' || $ctrl eq 'c') {
 	    ($nline) = $right =~ /^(\d+)/;
 	    my $n = $r2 - $r1 + 1;
 	    @new = read_line(*DIFF, $n);
-	    read_line(*NEW, $n) if $readfile;
+	    $readfile and read_line(*NEW, $n);
 	}
+	map { s/^..// } @old, @new;
 	flush_buffer([], \@old, \@new);
     }
     #
@@ -273,6 +272,7 @@ DIFF: while (<DIFF>) {
 	($nline) = $right =~ /^(\d+)/;
 
 	my @buf = merge_diffc(\@old, \@new);
+	map { map { s/^..// } @$_ } @buf;
 	flush_buffer(@buf);
     }
     #
@@ -290,6 +290,7 @@ DIFF: while (<DIFF>) {
 	print_column($column_width, $_, ' ', $_, 1);
 
 	my @buf = read_diffu(*DIFF, $a, $b);
+	map { map { s/^.// } @$_ } @buf;
 	flush_buffer(@buf);
     }
     else {
@@ -344,7 +345,7 @@ sub merge_diffc {
 
     while (@o or @n) {
 	my @slot = ([], [], []);
-	push @buf, \@slot;
+	push @buf, @slot;
 
 	if (@o and @n) {
 	    while (@o and @n and $o[0] =~ /^  / and $n[0] =~ /^  /) {
@@ -359,7 +360,7 @@ sub merge_diffc {
 	    push @{$slot[0]}, shift @n while (@n and $n[0] =~ /^  /);
 	}
 	    
-	push @{$slot[1]}, shift @o while (@o and $o[0] =~ /^- /);
+	push @{$slot[1]}, shift @o while (@o and $o[0] =~ /^\- /);
 	next if @{$slot[1]};
 
 	push @{$slot[2]}, shift @n while (@n and $n[0] =~ /^\+ /);
@@ -369,7 +370,7 @@ sub merge_diffc {
 	push(@{$slot[2]}, shift @n) while (@n and $n[0] =~ /^! /);
     }
 
-    map { @$_ } @buf;
+    @buf;
 }
 
 sub flush_buffer {
@@ -379,7 +380,6 @@ sub flush_buffer {
 	$n //= [];
 
 	for (@$s) {
-	    trim_mark(\$_) if not $opt_m;
 	    print_column($column_width, $_, ' ', $_);
 	    $oline++;
 	    $nline++;
@@ -390,20 +390,12 @@ sub flush_buffer {
 	    my $new = shift @$n;
 	    my $mark = $old ? $new ? '|' : '<' : '>';
 
-	    trim_mark(\$old) if $old and not $opt_m;
-	    trim_mark(\$new) if $new and not $opt_m;
-
 	    print_column($column_width, $old, $mark, $new);
 
 	    $oline++ if defined $old;
 	    $nline++ if defined $new;
 	}
     }
-}
-
-sub trim_mark {
-    my $tp = shift;
-    substr(${$tp}, 0, $diff_mode == DIFF_U ? 1 : 2, '');
 }
 
 sub print_identical {
