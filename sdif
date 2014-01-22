@@ -293,28 +293,24 @@ DIFF: while (<DIFF>) {
     elsif (/^\@\@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? \@\@/) {
 	$diff_mode = DIFF_U;
 	($oline, $nline) = ($1, $3);
-	my($a, $b, $c) = ($2//1, $4//1, 0);
+	my($a, $b) = ($2//1, $4//1);
 	print_column($column_width, $_, ' ', $_, 1);
-	while (<DIFF>) {
-	    if (/^\-/) {
-		push(@old, $_);
-		$a--;
-	    }
-	    elsif (/^\+/) {
-		push(@new, $_);
-		$b--;
-	    }
-	    else {
-		flush_buffer(\@old, \@new);
+
+	my @buf = read_diffu(*DIFF, $a, $b);
+
+	while (my($same, $old, $new) = splice(@buf, 0, 3)) {
+	    for (@$same) {
 		s/^.//;
 		print_column($column_width, $_, ' ', $_);
-		$c -= 2;
 		$oline++;
-		$nline++;
+		$nline++
 	    }
-	    last if $a + $b + $c <= 0;
+	    if ($old or $new) {
+		@old = $old ? @$old : ();
+		@new = $new ? @$new : ();
+		flush_buffer(\@old, \@new);
+	    }
 	}
-	flush_buffer(\@old, \@new);
     }
     else {
 	print;
@@ -335,6 +331,29 @@ if ($readfile) {
 exit($exit == 2);
 
 ######################################################################
+
+my %slot;
+BEGIN {
+    %slot = (" " => 0, "\t" => 0, "-" => 1, "+" => 2);
+}
+sub read_diffu {
+    my $FH = shift;
+    my @l = (0, @_);
+
+    my $i = 0;
+    my @buf;
+    my $slot;
+    while (2 * $l[0] + $l[1] + $l[2] > 0) {
+	$_ = <$FH>;
+	while (($i % 3) != ($slot = $slot{substr($_, 0, 1)})) {
+	    $i++;
+	}
+	$l[$slot]--;
+	$buf[$i] //= [];
+	push @{$buf[$i]}, $_;
+    }
+    map { $_ // [] } @buf;
+}
 
 sub flush_buffer {
     my @old = splice @{+shift}, 0;
