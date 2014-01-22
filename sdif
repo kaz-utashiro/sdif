@@ -82,7 +82,6 @@ my $opt_u;
 my $opt_m;
 my $opt_cdif;
 my $opt_env;
-my $opt_test;
 
 my @colormap;
 my @diffopts;
@@ -107,7 +106,6 @@ if ($ENV{'SDIFOPTS'}) {
 }
 
 my @optargs = (
-    "test" => \$opt_test,
     "n" => \$opt_n,
     "l" => \$opt_l,
     "s" => \$opt_s,
@@ -241,12 +239,7 @@ DIFF: while (<DIFF>) {
 	    @new = read_line(*DIFF, $n);
 	    read_line(*NEW, $n) if $readfile;
 	}
-	if ($opt_test) {
-	    new_flush_buffer([], \@old, \@new);
-	}
-	else {
-	    flush_buffer(\@old, \@new);
-	}
+	flush_buffer([], \@old, \@new);
     }
     #
     # context diff
@@ -280,11 +273,7 @@ DIFF: while (<DIFF>) {
 	($nline) = $right =~ /^(\d+)/;
 
 	my @buf = merge_diffc(\@old, \@new);
-	if ($opt_test) {
-	    new_flush_buffer(@buf);
-	} else {
-	    flush_buffer(\@old, \@new);
-	}
+	flush_buffer(@buf);
     }
     #
     # unified diff
@@ -301,25 +290,7 @@ DIFF: while (<DIFF>) {
 	print_column($column_width, $_, ' ', $_, 1);
 
 	my @buf = read_diffu(*DIFF, $a, $b);
-
-	if ($opt_test) {
-	    new_flush_buffer(@buf);
-	}
-	else {
-	    while (my($same, $old, $new) = splice(@buf, 0, 3)) {
-		for (@$same) {
-		    s/^.//;
-		    print_column($column_width, $_, ' ', $_);
-		    $oline++;
-		    $nline++
-		}
-		if ($old or $new) {
-		    @old = $old ? @$old : ();
-		    @new = $new ? @$new : ();
-		    flush_buffer(\@old, \@new);
-		}
-	    }
-	}
+	flush_buffer(@buf);
     }
     else {
 	print;
@@ -402,43 +373,6 @@ sub merge_diffc {
 }
 
 sub flush_buffer {
-    my @old = splice @{+shift}, 0;
-    my @new = splice @{+shift}, 0;
-
-    while (@old || @new) {
-	my($old, $new);
-
-	if ($diff_mode == DIFF_C and @old and $old[0] =~ /^\-/) {
-	    $old = shift @old;
-	}
-	elsif ($diff_mode == DIFF_C and @new and $new[0] =~ /^\+/) {
-	    $new = shift @new;
-	}
-	else {
-	    $old = shift @old if @old and $old[0] =~ /^[\-\!\<]/;
-	    $new = shift @new if @new and $new[0] =~ /^[\+\!\>]/;
-	}
-
-	my $mark;
-	if ($old || $new) {
-	    $mark = $old ? $new ? '|' : '<' : '>';
-	} else {
-	    ($old, $new) = (shift @old, shift @new);
-	    ($old, $new) = ($old || $new, $new || $old);
-	    $mark = ' ';
-	}
-
-	trim_mark(\$old) if $old and not $opt_m;
-	trim_mark(\$new) if $new and not $opt_m;
-
-	print_column($column_width, $old, $mark, $new);
-
-	$oline++ if defined $old;
-	$nline++ if defined $new;
-    }
-}
-
-sub new_flush_buffer {
 
     while (my($s, $o, $n) = splice(@_, 0, 3)) {
 	$o //= [];
