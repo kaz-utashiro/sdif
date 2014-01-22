@@ -9,6 +9,10 @@ use warnings;
 use utf8;
 use List::Util qw(min max);
 use Carp;
+use Getopt::Long;
+use Pod::Usage;
+use Data::Dumper;
+$Data::Dumper::Terse = 1;
 
 ##
 ## sdif: sdiff clone
@@ -65,19 +69,12 @@ Options:
 	-2	print new file only
 EOS
 
-if ($ENV{'SDIFOPTS'}) {
-    require('shellwords.pl');
-    unshift(@ARGV, &shellwords($ENV{'SDIFOPTS'}));
-}
-
 my $opt_n;
 my $opt_l;
 my $opt_s;
 my $opt_f;
-my $opt_h;
 my $opt_q;
 my $opt_d;
-my $opt_x;
 my $opt_F;
 my $opt_1;
 my $opt_2;
@@ -87,7 +84,9 @@ my $opt_i;
 my $opt_u;
 my $opt_B;
 my $opt_cdif;
+my $opt_env;
 
+my @colormap;
 my @diffopts;
 my @rcsopts;
 my @rcs;
@@ -98,48 +97,57 @@ my $readfile;
 my $screen_width;
 my $column_width;
 
-my $opts = 'nlsfhqdxmF12'.'cbiwuB';
-while (@ARGV and ($ARGV[0] =~ /^-/) and $_ = shift) {
-    my($car, $cdr);
-    next unless ($car, $cdr) = /^-?(.)(.*)/;
-    if (/-rcs$/) { $rcs++; next; }
-    if (/-cdif$/) { $opt_cdif = 1; next; }
-    if (/-diff=(.+)$/) { $diff = $1; next; }
-    if ($car eq 'h') { &usage; next; }
-    if ($car eq 'H') { exec "nroff -man $0|".($ENV{'PAGER'}||'more')." -s"; }
-    if ($car eq 'r') {
-	&usage("$_: Too many revisions\n") if (@rcs == 2);
-	$rcs++;
-	push @rcs, $_;
-	next;
-    }
-    if ($car eq 'w') {
-	if ($cdr =~ /^\d+$/) {
-	    $screen_width = $cdr;
-	    next;
-	}
-	if (@ARGV and $ARGV[0] =~ /^\d+$/) {
-	    $screen_width = shift;
-	    next;
-	}
-    }
-    if (s/^-?([cu]\d+)//) {
-	push(@diffopts, "-$1");
-	eval "\$opt_$car++";
-	redo;
-    }
-    push(@diffopts, "-$car") if index("cbiwuB", $car) >= $[;
-    if (index($opts, "$car:") >= 0) {
-	eval "\$opt_$car = length(\$cdr) ? \$cdr : \@ARGV ? shift : &usage";
-	next;
-    }
-    if (index($opts, $car) >= 0) {
-	eval "\$opt_$car++";
-	$_ = $cdr;
-	redo;
-    }
-    &usage("Unknown option: $car\n\n");
+my $opt_color;
+my $opt_w;
+my $opt_t;
+my @rcsopt;
+
+##
+## Special treatment --noenv option.
+##
+if (grep { $_ eq '--noenv' } @ARGV) {
+    $opt_env = 0;
 }
+if ($ENV{'SDIFOPTS'}) {
+    require('shellwords.pl');
+    unshift(@ARGV, &shellwords($ENV{'SDIFOPTS'}));
+}
+
+my @optargs = (
+    "n" => \$opt_n,
+    "l" => \$opt_l,
+    "s" => \$opt_s,
+    "f" => \$opt_f,
+    "F" => \$opt_F,
+    "1" => \$opt_1,
+    "2" => \$opt_2,
+    "b" => \$opt_b,
+    "i" => \$opt_i,
+    "B" => \$opt_B,
+    "w=i" => \$opt_w,
+
+    "d+" => \$opt_d,
+    "h|help" => sub { pod2usage() },
+    "man" => sub { pod2usage({-verbose => 2}) },
+
+    "env!" => \$opt_env,
+    "diff=s" => \$diff,
+    "color!" => \$opt_color,
+    "colormap|cm=s" => \@colormap,
+    "t|expand-tabs" => \$opt_t,
+    "c|context" => sub { push(@diffopts, "-c") },
+    "u|unified" => sub { push(@diffopts, "-u") },
+    "C=i" => sub { push(@diffopts, "-C" . ($_[1] > 0 ? $_[1] : '')) },
+    "U=i" => sub { push(@diffopts, "-U" . ($_[1] > 0 ? $_[1] : '')) },
+    "cdif" => \$opt_cdif,
+
+    "rcs" => \$rcs,
+    "r=s" => sub { push @rcsopt, "-r$_[1]" },
+    "q" => sub { push @rcsopt, "-q" },
+);
+
+Getopt::Long::Configure("bundling");
+GetOptions(@optargs) || pod2usage();
 
 $opt_f = 1 if $opt_F;
 push(@rcsopts, '-q') if $opt_q;
