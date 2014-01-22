@@ -1,7 +1,4 @@
 #!/usr/bin/perl -CSDA
-'di ';
-'ds 00 \"';
-'ig 00 ';
 
 require 5.010;
 use strict;
@@ -628,123 +625,133 @@ sub unesc {
 
 __END__
 
-######################################################################
-.00 ;			# finish .ig
+=pod
 
-'di			\" finish diversion--previous line must be blank
-.nr nl 0-1		\" fake up transition to first page again
-.nr % 0			\" start at page 1
-'; __END__ ############# From here on it's a standard manual page ####
-.de XX
-.ds XX \\$4\ (v\\$3)
-..
-.XX $Id: sdif,v 2.2 2014/01/19 14:50:28 utashiro Exp $
-.TH SDIF 1 \*(XX
-.SH NAME
-sdif \- sdiff clone
-.SH SYNOPSIS
-.nr ww \w'\fBsdif\fP\ '
-.in +\n(wwu
-.ta \n(wwu
-.ti -\n(wwu
-\fBsdif\fP	\c
-[\-n] [\-l] [\-s] [\-[fF]] [\-b] [\-i] [\-w] [\-w \fIwidth\fP]
-[\-c[\fIline\fP]] [\-diff=\fIcommand\fP] [file1 [file2]]
-.br
-.ti -\n(wwu
-\fBsdif\fP	\c
-[\-rcs] [\-q] [\-r\fIrev1\fP [\-r\fIrev2\fP]] [\fIsdif options\fP] file
-.SH DESCRIPTION
-.I Sdif
-is a clone of System V \fIsdiff\fP(1) command.  The basic
-feature of \fIsdif\fP and \fIsdiff\fP is making a
-side-by-side listing of two different files.  It makes much
-easier to compare two files than looking at the normal diff
-output.  All contents of two files a listed on left and
-right sides.  Center column is used to indicate how
-different the line.  No mark means there is no difference.
-The line only included in left file is indicated by `<'
-mark, and `>' is used to lines only in right file.  Modified
-line has a mark `|'.  Example output from sdif is like this:
-.nf
-.cs R 25
-.ft CW
+=head1 NAME
 
-	1    deleted       <
-	2    same             1    same
-	3    changed       |  2    modified
-	4    same             3    same
-	                   >  4    added
+sdif - sdiff clone
 
-.ft R
-.cs R
-.fi
-.PP
-.I Sdif
-has some incompatibilities with original \fIsdiff\fP.
-Negative incompatibility is a lack of \-o option and
-expanding all tabs to spaces.  Other incompatibilities are:
-.nf
+=head1 SYNOPSIS
 
-	\(bu line numbering
-	\(bu folding a long line
-	\(bu context diff support
-	\(bu unified diff support
-	\(bu option to keep diff mark
-	\(bu handle backspace and carriage return
-	\(bu default width is 80
-	\(bu rcs support
-	\(bu cdif (word context diff) support
-	\(bu read diff data from file or stdin
+sdif
+[-n] [-l] [-s] [-[fF]] [-b] [-i] [-w] [-w width] [-c[line]]
+[-diff=command] [file1 [file2]]
 
-.fi
-.SH OPTIONS
-.IP "\-w \fIwidth\fP"
-Use \fIwidth\fP as a width of output listing.  Default width
-is 80.  Original \fIsdiff\fP has a default value 130 but
-nobody uses 132 column line printer in these days.  If the
-standard error is to a terminal, the width of that terminal
-is taken as a output width if possible.
-.IP \-l
+sdif
+[-rcs] [-q] [-rrev1 [-rrev2]] [sdif options] file
+
+=head1 DESCRIPTION
+
+Sdif is a clone of System V sdiff(1) command.  The basic feature of
+sdif and sdiff is making a side-by-side listing of two different
+files.  It makes much easier to compare two files than looking at the
+normal diff output.  All contents of two files a listed on left and
+right sides.  Center column is used to indicate how different the
+line.  No mark means there is no difference.  The line only included
+in left file is indicated by `<' mark, and `>' is used to lines only
+in right file.  Modified line has a mark `|'.  Example output from
+sdif is like this:
+
+     1    deleted       <
+     2    same             1    same
+     3    changed       |  2    modified
+     4    same             3    same
+                        >  4    added
+
+
+Sdif has some incompatibilities with original sdiff.  Negative
+incompatibility is a lack of -o option and expanding all tabs to
+spaces.  Other incompatibilities are:
+
+     o line numbering
+     o folding a long line
+     o context diff support
+     o unified diff support
+     o option to keep diff mark
+     o handle backspace and carriage return
+     o default width is 80
+     o rcs support
+     o cdif (word context diff) support
+     o read diff data from file or stdin
+
+
+=head1 OPTIONS
+
+=over 7
+
+=item -w width
+
+Use width as a width of output listing.  Default width is 80.
+Original sdiff has a default value 130 but nobody uses 132 column line
+printer in these days.  If the standard error is to a terminal, the
+width of that terminal is taken as a output width if possible.
+
+=item -l
+
 Print only left column if the line is identical.
-.IP \-s
-Silent.  No output for identical lines.  Reading diff output
-from file or stdin put this switch on automatically.
-.IP \-n
+
+=item -s
+
+Silent.  No output for identical lines.  Reading diff output from file
+or stdin put this switch on automatically.
+
+=item -n
+
 Print line number on each lines.
-.IP \-f
-Fold the line if it is longer than printing width.  Folded
-line is indicated by `+' mark at top of the line.  No
-continue mark is printed when numbering option is on.
-.IP \-F
+
+=item -f
+
+Fold the line if it is longer than printing width.  Folded line is
+indicated by `+' mark at top of the line.  No continue mark is printed
+when numbering option is on.
+
+=item -F
 Fold longs line at word boundaries.
-.IP "\-rcs, \-r\fIrev\fP"
-Use rcsdiff instead of normal diff.  Option \-rcs is not
-required when \-r\fIrev\fP is supplied.
-.IP \-cdif
-Use \fIcdif\fP command instead of normal diff command.
-.IP "\-b, \-w, \-c, \-u, \-B"
-Passed through to the back-end diff command.  \fISdif\fP can
-process the output from context diff (\-c) and unified diff
-(\-u) if those are available.  These are sometimes useful
-because you can get only modified part of text.  Option \-B
-is valid only for \fIcdif\fP.
-.IP ""
+
+=item -rcs, -rrev
+
+Use rcsdiff instead of normal diff.  Option -rcs is not required
+when -rrev is supplied.
+
+=item -cdif
+
+Use cdif command instead of normal diff command.
+
+=item -b, -w, -c, -u, -B
+
+Passed through to the back-end diff command.  Sdif can process the
+output from context diff (-c) and unified diff (-u) if those are
+available.  These are sometimes useful because you can get only
+modified part of text.  Option -B is valid only for cdif.
+
 If you want to pass a option not listed here, please use
-\-diff="cdif ..." option.
-.IP "\-diff=\fIcommand\fP"
-Any command can be specified as a diff command to be used.
-However piping output to sdif is usually easier unless you
-want to get whole text.
-.IP "\-1, \-2"
-Only old file is printed when option \-1 is supplied and
-only new file with \-2 option.  These are almost useless
-with normal diff because ``sdif -1 A B'' is equivalent to
-``cat A'', but probably make some sense with \-cdif option.
-.SH AUTHOR
-.nf
+-diff="cdif ..." option.
+
+=item -diff=command
+
+Any command can be specified as a diff command to be used.  However
+piping output to sdif is usually easier unless you want to get whole
+text.
+
+=item -1, -2
+
+Only old file is printed when option -1 is supplied and only new file
+with -2 option.  These are almost useless with normal diff because
+``sdif -1 A B'' is equivalent to ``cat A'', but probably make some
+sense with -cdif option.
+
+=back
+
+=head1 AUTHOR
+
 Kazumasa Utashiro
-.fi
-.SH "SEE ALSO"
-perl(1), diff(1), cdif(1)
-.ex
+
+https://github.com/kaz-utashiro/
+
+=head1 SEE ALSO
+
+perl(1),
+diff(1),
+cdif(1)
+
+=cut
