@@ -36,7 +36,6 @@ $Data::Dumper::Terse = 1;
 ##	- no -o option
 ##	- all tabs are expanded
 ##	- default width is 80
-##	- rcs support
 ##	- cdif (word context diff) support
 ##	- read diff data from file or stdin
 ##
@@ -52,9 +51,6 @@ sdif - sdiff clone
 sdif
 [-n] [-l] [-s] [-[fF]] [-b] [-i] [-w] [-w width] [-c[line]]
 [-diff=command] [file1 [file2]]
-
-sdif
-[-rcs] [-q] [-rrev1 [-rrev2]] [sdif options] file
 
 	-n	print line number
 	-l	print left column only for identical line
@@ -89,10 +85,6 @@ my $opt_env;
 
 my @colormap;
 my @diffopts;
-my @rcsopts;
-my @rcs;
-my $rcs;
-my $rcsfile;
 my $diff;
 my $readfile;
 my $screen_width;
@@ -101,7 +93,6 @@ my $column_width;
 my $opt_color;
 my $opt_w;
 my $opt_t;
-my @rcsopt;
 
 ##
 ## Special treatment --noenv option.
@@ -141,35 +132,25 @@ my @optargs = (
     "C=i" => sub { push(@diffopts, "-C" . ($_[1] > 0 ? $_[1] : '')) },
     "U=i" => sub { push(@diffopts, "-U" . ($_[1] > 0 ? $_[1] : '')) },
     "cdif" => \$opt_cdif,
-
-    "rcs" => \$rcs,
-    "r=s" => sub { push @rcsopt, "-r$_[1]" },
-    "q" => sub { push @rcsopt, "-q" },
 );
 
 Getopt::Long::Configure("bundling");
 GetOptions(@optargs) || usage();
 
 $opt_f = 1 if $opt_F;
-push(@rcsopts, '-q') if $opt_q;
-$diff = $rcs ? 'rcsdiff' : 'diff' unless $diff;
+$diff ||= 'diff';
 
 my($OLD, $NEW, $DIFF);
-if ($rcs) {
-    $rcsfile = shift || usage("No RCS filename\n\n");
-    $DIFF = "$diff @diffopts @rcsopts @rcs $rcsfile |";
-    $OLD = join ' ', "co @rcsopts -p", @rcs ? ($rcs[0]) : (), "$rcsfile |";
-    $NEW = @rcs > 1 ? "co @rcsopts -p " . $rcs[1] . " $rcsfile |" : $rcsfile;
-} elsif (@ARGV == 2) {
+if (@ARGV == 2) {
     ($OLD, $NEW) = @ARGV;
     $DIFF = "$diff @diffopts $OLD $NEW |";
 } elsif (@ARGV < 2) {
     $DIFF = shift || '-';
     $opt_s++;
 } else {
-    usage("Arguments error.\n\n");
+    usage("Unexpected arguments.\n\n");
 }
-$readfile = $OLD && $NEW && !($opt_s || $opt_c || $opt_u);
+$readfile = ($OLD and $NEW) && !($opt_s || $opt_c || $opt_u);
 
 sub usage {
     select STDERR;
@@ -662,7 +643,6 @@ spaces.  Other incompatibilities are:
      o option to keep diff mark
      o handle backspace and carriage return
      o default width is 80
-     o rcs support
      o cdif (word context diff) support
      o read diff data from file or stdin
 
@@ -699,11 +679,6 @@ when numbering option is on.
 
 =item -F
 Fold longs line at word boundaries.
-
-=item -rcs, -rrev
-
-Use rcsdiff instead of normal diff.  Option -rcs is not required
-when -rrev is supplied.
 
 =item -cdif
 
