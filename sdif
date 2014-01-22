@@ -123,10 +123,14 @@ Getopt::Long::Configure("bundling");
 GetOptions(@optargs) || usage();
 
 my %colormap = (
-    COMMAND => "SE" ,
-    OMARK   => "CS" ,
-    NMARK   => "MS" ,
-    LINE    => "Y",
+    OCOMMAND => "CSE" ,
+    NCOMMAND => "MSE" ,
+    OFILE    => "CDE" ,
+    NFILE    => "MDE" ,
+    OMARK    => "CDw"  ,
+    NMARK    => "MDw"  ,
+    BMARK    => "w"   ,
+    LINE     => "Y"   ,
     );
 
 if (@opt_colormap) {
@@ -164,8 +168,8 @@ sub usage {
     exit;
 }
 
-$screen_width = &terminal_width unless defined $screen_width;
-$column_width = max(1, int(($screen_width - 5) / 2));
+$screen_width = $opt_w || &terminal_width;
+$column_width = max(1, int(($screen_width - 6) / 2));
 
 if ($opt_d) {
     printf STDERR "\$OLD = %s\n", $OLD // "undef";
@@ -201,8 +205,6 @@ if ($opt_cdif) {
     open(DIFF, $DIFF) || die "cannot open diff: $!\n";
 }
 
-my $nwidth = 4;
-my $nformat = "%${nwidth}d ";
 my $oline = 1;
 my $nline = 1;
 
@@ -251,11 +253,10 @@ DIFF: while (<DIFF>) {
     #
     elsif (/^\*\*\* /) {
 	$diff_mode = DIFF_C;
-	print_column($column_width, $_, ' ', scalar(<DIFF>), 1);
+	print_command($column_width, $_, scalar(<DIFF>), type => 'FILE');
     }
     elsif ($_ eq "***************\n") {
 	$diff_mode = DIFF_C;
-	print_column($column_width, $_, ' ', $_, 1);
 	my $ohead = $_ = <DIFF>;
 	unless (($left) = /^\*\*\* ([\d,]+) \*\*\*\*$/) {
 	    print;
@@ -273,7 +274,7 @@ DIFF: while (<DIFF>) {
 	if (@old == 0 or grep(/^\!/, @old)) {
 	    @new = read_line(*DIFF, scalar(range($right)));
 	}
-	print_column($column_width, $ohead, ' ', $nhead, 1) unless $opt_n;
+	print_command($column_width, $ohead, $nhead);
 	($oline) = $left =~ /^(\d+)/;
 	($nline) = $right =~ /^(\d+)/;
 
@@ -287,13 +288,13 @@ DIFF: while (<DIFF>) {
     elsif (/^--- /) {
 	$diff_mode = DIFF_U;
 	my $next = <DIFF>;
-	print_column($column_width, $_, ' ', $next, 1);
+	print_command($column_width, $_, $next, type => 'FILE');
     }
     elsif (/^\@\@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? \@\@/) {
 	$diff_mode = DIFF_U;
 	($oline, $nline) = ($1, $3);
 	my($a, $b) = ($2//1, $4//1);
-	print_column($column_width, $_, ' ', $_, 1);
+	print_command($column_width, $_, $_, type => 'COMMAND');
 
 	my @buf = read_diffu(*DIFF, $a, $b);
 	map { map { s/^.// } @$_ } @buf;
@@ -386,7 +387,7 @@ sub flush_buffer {
 	$n //= [];
 
 	for (@$s) {
-	    print_column($column_width, $_, ' ', $_);
+	    print_column($column_width, $_, ' ', ' ', $_);
 	    $oline++;
 	    $nline++;
 	}
@@ -394,9 +395,10 @@ sub flush_buffer {
 	while (@$o or @$n) {
 	    my $old = shift @$o;
 	    my $new = shift @$n;
-	    my $mark = $old ? $new ? '|' : '<' : '>';
+	    my $omark = $old ? '<' : ' ';
+	    my $nmark = $new ? '>' : ' ';
 
-	    print_column($column_width, $old, $mark, $new);
+	    print_column($column_width, $old, $omark, $nmark, $new);
 
 	    $oline++ if defined $old;
 	    $nline++ if defined $new;
@@ -414,14 +416,14 @@ sub print_identical {
 	    print linenum($oline) if $opt_n;
 	    print expand_tab($old);
 	} else {
-	    print_column($column_width, $old, ' ', $new);
+	    print_column($column_width, $old, ' ', ' ', $new);
 	}
 	$oline++; $nline++;
     }
 }
 
 sub print_column {
-    my($width, $old, $mark, $new, $noline) = @_;
+    my($width, $old, $omark, $nmark, $new, $noline) = @_;
     my $print_number = ($opt_n and not $noline);
 
     if ($opt_1) {
@@ -455,9 +457,12 @@ sub print_column {
 	($o, $old) = fold($old // "", $width, onword => $opt_F, pad => 1);
 	($n, $new) = fold($new // "", $width, onword => $opt_F);
 
-	print($onum, $o,
-	      ' ', $ocont, $mark, $ncont, ' ',
-	      $nnum, $n,
+	print($onum,
+	      $o,
+	      color($omark =~ /\S/ ? 'OMARK' : 'BMARK', $omark),
+	      color($nmark =~ /\S/ ? 'NMARK' : 'BMARK', $nmark),
+	      $nnum,
+	      $n,
 	      "\n");
 
 	last unless $opt_f;
@@ -470,6 +475,27 @@ sub print_column {
 	    $ncont = $contmark if $new ne '';
 	}
     }
+}
+
+sub print_command {
+    my($width, $old, $new) = splice(@_, 0, 3);
+    my %opt = @_;
+
+    chomp $old;
+    chomp $new;
+    my($o, $ox) = fold($old, $width, pad => 1);
+    my($n, $nx) = fold($new, $width, pad => 1);
+
+    my($ocolor, $ncolor) = qw(OCOMMAND NCOMMAND);
+    if ($opt{type}) {
+	$ocolor = "O" . $opt{type};
+	$ncolor = "N" . $opt{type};
+    }
+
+    print color($ocolor, $o);
+    print "  ";
+    print color($ncolor, $n);
+    print "\n";
 }
 
 my $wchars;
@@ -572,8 +598,14 @@ sub range {
     wantarray ? ($from, $to) : $to - $from + 1;
 }
 
+my $nwidth;
+my $nformat;
+BEGIN {
+    $nwidth = 4;
+    $nformat = "%${nwidth}d ";
+}
 sub linenum {
-    sprintf($nformat, @_);
+    color("LINE", sprintf("%4d", @_)) . " ";
 }
 
 my @tabspace;
