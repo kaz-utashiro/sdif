@@ -8,6 +8,7 @@ use List::Util qw(min max);
 use Carp;
 use Getopt::Long;
 use Pod::Usage;
+use Term::ANSIColor qw(:constants);
 use Data::Dumper;
 $Data::Dumper::Terse = 1;
 
@@ -25,19 +26,6 @@ $Data::Dumper::Terse = 1;
 ## distinguishable from the original one.  THIS SOFTWARE IS PROVIDED
 ## BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES ARE
 ## DISCLAIMED.
-##
-## Incompatibility:
-##	- has -n option for numbering
-##	- has -f option for folding
-##	- has -F option for word boundary folding
-##	- has -c option for context diff
-##	- has -m option to keep diff mark
-##	- handle backspace and carriage return
-##	- no -o option
-##	- all tabs are expanded
-##	- default width is 80
-##	- cdif (word context diff) support
-##	- read diff data from file or stdin
 ##
 
 =pod
@@ -82,8 +70,7 @@ my $opt_u;
 my $opt_B;
 my $opt_cdif;
 my $opt_env;
-
-my @colormap;
+my @opt_colormap;
 my @diffopts;
 my $diff;
 my $readfile;
@@ -106,7 +93,7 @@ if ($ENV{'SDIFOPTS'}) {
 }
 
 my @optargs = (
-    "n" => \$opt_n,
+    "n|number!" => \$opt_n,
     "l" => \$opt_l,
     "s" => \$opt_s,
     "f" => \$opt_f,
@@ -125,7 +112,7 @@ my @optargs = (
     "env!" => \$opt_env,
     "diff=s" => \$diff,
     "color!" => \$opt_color,
-    "colormap|cm=s" => \@colormap,
+    "colormap|cm=s" => \@opt_colormap,
     "t|expand-tabs" => \$opt_t,
     "c|context" => sub { push(@diffopts, "-c") },
     "u|unified" => sub { push(@diffopts, "-u") },
@@ -136,6 +123,25 @@ my @optargs = (
 
 Getopt::Long::Configure("bundling");
 GetOptions(@optargs) || usage();
+
+my %colormap = (
+    COMMAND => "SE" ,
+    OMARK   => "CS" ,
+    NMARK   => "MS" ,
+    LINE    => "Y",
+    );
+
+if (@opt_colormap) {
+    map {
+	my $c = pop @$_;
+	map { $colormap{$_} = $c }
+	map { match_glob $_, keys %colormap }
+	@$_;
+    }
+    map { [ split /=/, $_, -1 ] }
+    map { split /,/ }
+    @opt_colormap;
+}
 
 $opt_f = 1 if $opt_F;
 $diff ||= 'diff';
@@ -456,8 +462,6 @@ sub print_column {
     }
 }
 
-use Term::ANSIColor qw(:constants);
-
 my $wchars;
 my $_a_zA_Z0_9;
 my $reset_re;
@@ -607,6 +611,49 @@ sub unesc {
     local $_ = shift;
     s/\e/\\e/g;
     $_;
+}
+
+sub colorseq {
+    my $colormode = shift;
+
+    my($start, $end) = ('', '');
+    if ($colormode =~ /,/) {
+	($start, $end) = split(/,/, $colormode, 2);
+    } else {
+	map {
+	    $start .= UNDERLINE if /U/;
+	    $start .= REVERSE   if /S/;
+	    $start .= BOLD      if /D/;
+	    $start .= BLINK     if /F/;
+	    $start .= RED       if /R/; $start .= ON_RED       if /r/;
+	    $start .= GREEN     if /G/; $start .= ON_GREEN     if /g/;
+	    $start .= BLUE      if /B/; $start .= ON_BLUE      if /b/;
+	    $start .= CYAN      if /C/; $start .= ON_CYAN      if /c/;
+	    $start .= MAGENTA   if /M/; $start .= ON_MAGENTA   if /m/;
+	    $start .= YELLOW    if /Y/; $start .= ON_YELLOW    if /y/;
+	    $start .= BLACK     if /K/; $start .= ON_BLACK     if /k/;
+	    $start .= WHITE     if /W/; $start .= ON_WHITE     if /w/;
+	} $colormode if $colormode;
+	$end = RESET if $start;
+	$start =~ s/m\e\[/;/g;
+    }
+    ($start, $end);
+}
+
+my %colorcache;
+
+sub color {
+    my($color, $text) = @_;
+    return $text unless $color;
+    unless ($colorcache{$color}) {
+	my $mode = exists $colormap{$color} ? $colormap{$color} : $color;
+	$colorcache{$color} = [ colorseq($mode) ];
+    }
+    my($s, $e) = @{$colorcache{$color}};
+    if ($s ne "") {
+	$text =~ s/(^|$reset_re)([^\e\r\n]+)/$1$s$2$e/mg;
+    }
+    $text;
 }
 
 __END__
