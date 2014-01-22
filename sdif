@@ -1,7 +1,4 @@
 #!/usr/bin/perl -CSDA
-'di ';
-'ds 00 \"';
-'ig 00 ';
 
 require 5.010;
 use strict;
