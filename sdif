@@ -8,6 +8,8 @@ use List::Util qw(min max);
 use Carp;
 use Getopt::Long;
 use Pod::Usage;
+use Text::ParseWords qw(shellwords);
+use Text::Glob qw(match_glob);
 use Term::ANSIColor qw(:constants);
 use Data::Dumper;
 $Data::Dumper::Terse = 1;
@@ -36,38 +38,33 @@ sdif - sdiff clone
 
 =head1 SYNOPSIS
 
-sdif
-[-n] [-l] [-s] [-[fF]] [-b] [-i] [-w] [-w width] [-c[line]]
-[-diff=command] [file1 [file2]]
+sdif file_1 file_2
 
-	-n	print line number
-	-l	print left column only for identical line
-	-s	don't print identical line
-	-f	fold line instead of truncating
-		(folded line is marked by '.' character)
-	-F	fold line by word boundaries
-	-c[#]	do context diff
-	-w #	specify width of output (default is 80)
-	--cdif	use "cdif"
-	-1	print old file only
-	-2	print new file only
+diff ... | sdif
+
+    --number, -n	print line number
+    --truncate, -t	truncate long line
+    --onword		fold line onword boundaries
+    --width, -w		specify width of output (default is 80)
+    --cdif		use "cdif"
 
 =cut
 
 my $opt_n;
 my $opt_l;
 my $opt_s;
-my $opt_f;
 my $opt_q;
 my $opt_d;
-my $opt_F;
 my $opt_1;
 my $opt_2;
 my $opt_c;
 my $opt_b;
 my $opt_i;
 my $opt_u;
+my $opt_truncate;
+my $opt_onword;
 my $opt_cdif;
+my @opt_cdifopts;
 my $opt_env;
 my @opt_colormap;
 my @diffopts;
@@ -77,8 +74,8 @@ my $screen_width;
 my $column_width;
 
 my $opt_color;
+my $opt_mark = 1;
 my $opt_w;
-my $opt_t;
 
 ##
 ## Special treatment --noenv option.
@@ -93,10 +90,11 @@ if ($ENV{'SDIFOPTS'}) {
 
 my @optargs = (
     "n|number!" => \$opt_n,
+    "truncate|t!" => \$opt_truncate,
+    "onword|W!" => \$opt_onword,
+    "mark!" => \$opt_mark,
     "l" => \$opt_l,
     "s" => \$opt_s,
-    "f" => \$opt_f,
-    "F" => \$opt_F,
     "1" => \$opt_1,
     "2" => \$opt_2,
     "b" => \$opt_b,
@@ -111,26 +109,33 @@ my @optargs = (
     "diff=s" => \$diff,
     "color!" => \$opt_color,
     "colormap|cm=s" => \@opt_colormap,
-    "t|expand-tabs" => \$opt_t,
     "c|context" => sub { push(@diffopts, "-c") },
     "u|unified" => sub { push(@diffopts, "-u") },
     "C=i" => sub { push(@diffopts, "-C" . ($_[1] > 0 ? $_[1] : '')) },
     "U=i" => sub { push(@diffopts, "-U" . ($_[1] > 0 ? $_[1] : '')) },
     "cdif" => \$opt_cdif,
+    "cdifopts" => \@opt_cdifopts,
+
+    "--mecab" => sub { push @opt_cdifopts, "--mecab" },
 );
 
 Getopt::Long::Configure("bundling");
 GetOptions(@optargs) || usage();
 
 my %colormap = (
-    OCOMMAND => "CSE" ,
-    NCOMMAND => "MSE" ,
-    OFILE    => "CDE" ,
-    NFILE    => "MDE" ,
-    OMARK    => "CDw"  ,
-    NMARK    => "MDw"  ,
-    BMARK    => "w"   ,
-    LINE     => "Y"   ,
+    OCOMMAND => "CSE",
+    NCOMMAND => "MSE",
+    OFILE    => "CDE",
+    NFILE    => "MDE",
+    OMARK    => "Cw" ,
+    NMARK    => "Mw" ,
+    UMARK    => "w"  ,
+    OLINE    => "Y" ,
+    NLINE    => "Y" ,
+    ULINE    => "Y"  ,
+    OTEXT    => "C"  ,
+    NTEXT    => "M"  ,
+    UTEXT    => ""   ,
     );
 
 if (@opt_colormap) {
@@ -145,7 +150,6 @@ if (@opt_colormap) {
     @opt_colormap;
 }
 
-$opt_f = 1 if $opt_F;
 $diff ||= 'diff';
 
 my($OLD, $NEW, $DIFF);
@@ -169,7 +173,7 @@ sub usage {
 }
 
 $screen_width = $opt_w || &terminal_width;
-$column_width = max(1, int(($screen_width - 6) / 2));
+$column_width = max(1, int(($screen_width - ($opt_mark ? 2 : 0)) / 2));
 
 if ($opt_d) {
     printf STDERR "\$OLD = %s\n", $OLD // "undef";
@@ -192,7 +196,7 @@ if ($opt_cdif) {
 	if ($DIFF ne '-') {
 	    open(STDIN, $DIFF) || die "cannot open diff: $!\n";
 	}
-	do { exec qw"cdif --nocc --nomc" } ;
+	do { exec join ' ', qw(cdif --nocc --nomc --notc), @opt_cdifopts } ;
 	warn "exec failed: $!";
 	print while <>;
 	exit;
@@ -231,7 +235,9 @@ DIFF: while (<DIFF>) {
 	    my $identical_line = $l1 - $oline + 1 - ($ctrl ne 'a');
 	    print_identical($identical_line);
 	}
-	print if $opt_d || $opt_s;
+	if ($opt_d || $opt_s) {
+	    print_command($column_width, $_, $_);
+	}
 	if ($ctrl eq 'd' || $ctrl eq 'c') {
 	    ($oline) = $left =~ /^(\d+)/;
 	    my $n = $l2 - $l1 + 1;
@@ -253,7 +259,8 @@ DIFF: while (<DIFF>) {
     #
     elsif (/^\*\*\* /) {
 	$diff_mode = DIFF_C;
-	print_command($column_width, $_, scalar(<DIFF>), type => 'FILE');
+	my $next = <DIFF>;
+	print_command($column_width, $_, $next, type => 'FILE');
     }
     elsif ($_ eq "***************\n") {
 	$diff_mode = DIFF_C;
@@ -361,20 +368,20 @@ sub merge_diffc {
 	    }
 	}
 	elsif (@o) {
-	    push @{$slot[0]}, shift @o while (@o and $o[0] =~ /^  /);
+	    push @{$slot[0]}, shift @o while @o and $o[0] =~ /^  /;
 	}
 	elsif (@n) {
-	    push @{$slot[0]}, shift @n while (@n and $n[0] =~ /^  /);
+	    push @{$slot[0]}, shift @n while @n and $n[0] =~ /^  /;
 	}
-	    
-	push @{$slot[1]}, shift @o while (@o and $o[0] =~ /^\- /);
+
+	push @{$slot[1]}, shift @o while @o and $o[0] =~ /^\- /;
 	next if @{$slot[1]};
 
-	push @{$slot[2]}, shift @n while (@n and $n[0] =~ /^\+ /);
+	push @{$slot[2]}, shift @n while @n and $n[0] =~ /^\+ /;
 	next if @{$slot[2]};
 
-	push(@{$slot[1]}, shift @o) while (@o and $o[0] =~ /^! /);
-	push(@{$slot[2]}, shift @n) while (@n and $n[0] =~ /^! /);
+	push(@{$slot[1]}, shift @o) while @o and $o[0] =~ /^! /;
+	push(@{$slot[2]}, shift @n) while @n and $n[0] =~ /^! /;
     }
 
     @buf;
@@ -422,6 +429,17 @@ sub print_identical {
     }
 }
 
+my $num_width;
+my $num_format;
+BEGIN {
+    $num_width = 4;
+    $num_format = "%${num_width}d";
+}
+sub linenum {
+    my $n = shift;
+    defined $n ? (sprintf $num_format, $n) : (' ' x $num_width);
+}
+
 sub print_column {
     my($width, $old, $omark, $nmark, $new, $noline) = @_;
     my $print_number = ($opt_n and not $noline);
@@ -435,11 +453,12 @@ sub print_column {
 	return;
     }
 
-    my($onum, $nnum) = ('', '');
+    my($onum, $nnum, $nspace) = ('', '', '');
     if ($print_number) {
-	$onum = ' ' x 5;
-	$nnum = ' ' x 5;
-	$width = max(1, $width - 5);
+	$onum = ' ' x $num_width;
+	$nnum = ' ' x $num_width;
+	$nspace = ' ',
+	$width = max(1, $width - $num_width - length($nspace));
     }
     if (defined $old) {
 	chomp $old;
@@ -451,29 +470,37 @@ sub print_column {
 	$new = expand_tab($new);
 	$nnum = linenum($nline) if $print_number;
     }
+
+    my $modified = "$omark$nmark" =~ /\S/;
+    my $OTEXT = $modified && $old ? "OTEXT" : "UTEXT";
+    my $NTEXT = $modified && $new ? "NTEXT" : "UTEXT";
+    my $OLINE = $modified ? "OLINE" : "ULINE";
+    my $NLINE = $modified ? "NLINE" : "ULINE";
+    my $OMARK = $modified ? "OMARK" : "UMARK";
+    my $NMARK = $modified ? "NMARK" : "UMARK";
+
     my($o, $n);
-    my($ocont, $ncont, $contmark) = (' ', ' ', '.');
     while (1) {
-	($o, $old) = fold($old // "", $width, onword => $opt_F, pad => 1);
-	($n, $new) = fold($new // "", $width, onword => $opt_F);
+	($o, $old) = fold($old // "", $width, onword => $opt_onword,
+			  pad => 1);
+	($n, $new) = fold($new // "", $width, onword => $opt_onword,
+			  pad => ($colormap{NTEXT} =~ /E/ ? 1 : 0));
 
-	print($onum,
-	      $o,
-	      color($omark =~ /\S/ ? 'OMARK' : 'BMARK', $omark),
-	      color($nmark =~ /\S/ ? 'NMARK' : 'BMARK', $nmark),
-	      $nnum,
-	      $n,
-	      "\n");
+	print color($OLINE, $onum), $nspace if $print_number;
+	print color($OTEXT, $o) if $o ne "";
+	print color($OMARK, $omark), color($NMARK, $nmark) if $opt_mark;
+	print color($NLINE, $nnum), $nspace if $print_number;
+	print color($NTEXT, $n) if $n ne "";
+	print "\n";
 
-	last unless $opt_f;
+	last if $opt_truncate;
 	last unless $old ne '' or $new ne '';
 
 	if ($print_number) {
-	    $onum = $nnum = ' ' x 5;
-	} else {
-	    $ocont = $contmark if $old ne '';
-	    $ncont = $contmark if $new ne '';
+	    $onum = $nnum = linenum(undef);
 	}
+	$omark = $old ne '' ? '.' : ' ';
+	$nmark = $new ne '' ? '.' : ' ';
     }
 }
 
@@ -481,8 +508,14 @@ sub print_command {
     my($width, $old, $new) = splice(@_, 0, 3);
     my %opt = @_;
 
-    chomp $old;
-    chomp $new;
+    if (defined $old) {
+	chomp $old;
+	$old = expand_tab($old);
+    }
+    if (defined $new) {
+	chomp $new;
+	$new = expand_tab($new);
+    }
     my($o, $ox) = fold($old, $width, pad => 1);
     my($n, $nx) = fold($new, $width, pad => 1);
 
@@ -491,9 +524,8 @@ sub print_command {
 	$ocolor = "O" . $opt{type};
 	$ncolor = "N" . $opt{type};
     }
-
     print color($ocolor, $o);
-    print "  ";
+    print "  " if $opt_mark;
     print color($ncolor, $n);
     print "\n";
 }
@@ -542,6 +574,7 @@ sub fold {
 	if (my $mb = s/^([$wchars]+)//o or s/^(\e*[^\e$wchars]+)//o) {
 	    my $string = $1;
 	    my $chars = $mb ? max(1, int($room/2)) : $room;
+
 	    my $cut = substr($string, 0, $chars, "");
 	    $folded .= $cut;
 	    $room -= mbwidth($cut);
@@ -596,16 +629,6 @@ sub range {
     local $_ = shift;
     my($from, $to) = /,/ ? split(/,/) : ($_, $_);
     wantarray ? ($from, $to) : $to - $from + 1;
-}
-
-my $nwidth;
-my $nformat;
-BEGIN {
-    $nwidth = 4;
-    $nformat = "%${nwidth}d ";
-}
-sub linenum {
-    color("LINE", sprintf("%4d", @_)) . " ";
 }
 
 my @tabspace;
