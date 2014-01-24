@@ -909,11 +909,13 @@ Defaults are :
 
 This is equivalent to :
 
-    cdif --cm 'OCOMMAND=CSE,NCOMMAND=MSE,OFILE=CDE,NFILE=MDE' \
+    sdif --cm 'OCOMMAND=CSE,NCOMMAND=MSE,OFILE=CDE,NFILE=MDE' \
          --cm 'OMARK=Cw,NMARK=Mw,UMARK=w' \
          --cm '*LINE=Y,OTEXT=C,NTEXT=M,UTEXT='
 
-=back
+Try next setting if you want to make modified section more visible.
+
+    sdif -n --cdif --cm '[ON]TEXT=wE,UMARK=,OMARK=C,NMARK=M'
 
 =head1 AUTHOR
 
