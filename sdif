@@ -509,10 +509,10 @@ sub print_column {
 
 	my %f;
 	$f{OMARK} = $colorize->($OMARK, $omark);
-	$f{OLINE} = $colorize->($OLINE, $onum) if $print_number;
+	$f{OLINE} = $colorize->($OLINE, $onum) . " " if $print_number;
 	$f{OTEXT} = $colorize->($OTEXT, $o) if $o ne "";
 	$f{NMARK} = $colorize->($NMARK, $nmark);
-	$f{NLINE} = $colorize->($NLINE, $nnum) if $print_number;
+	$f{NLINE} = $colorize->($NLINE, $nnum) . " " if $print_number;
 	$f{NTEXT} = $colorize->($NTEXT, $n) if $n ne "";
 	print_fields(\%f);
 
@@ -558,11 +558,11 @@ sub print_fields {
     my $F = shift;
     local $_;
     $_ = $F->{OMARK} and print if $omarkpos eq LEFT;
-    $_ = $F->{OLINE} and print "$_ ";
+    $_ = $F->{OLINE} and print;
     $_ = $F->{OTEXT} and print;
     $_ = $F->{OMARK} and print if $omarkpos eq RIGHT;
     $_ = $F->{NMARK} and print if $nmarkpos eq LEFT;
-    $_ = $F->{NLINE} and print "$_ ";
+    $_ = $F->{NLINE} and print;
     $_ = $F->{NTEXT} and print;
     $_ = $F->{OMARK} and print if $nmarkpos eq RIGHT;
     print "\n";
