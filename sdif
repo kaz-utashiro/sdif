@@ -4,8 +4,8 @@ require 5.010;
 use strict;
 use warnings;
 use utf8;
-use List::Util qw(min max);
 use Carp;
+use List::Util qw(min max);
 use Getopt::Long;
 use Pod::Usage;
 use Text::ParseWords qw(shellwords);
@@ -55,8 +55,6 @@ my $opt_l;
 my $opt_s;
 my $opt_q;
 my $opt_d;
-my $opt_1;
-my $opt_2;
 my $opt_c;
 my $opt_b;
 my $opt_i;
@@ -67,9 +65,8 @@ my $opt_cdif;
 my @opt_cdifopts;
 my $opt_env;
 my @opt_colormap;
-my @diffopts;
+my @opt_diffopts;
 my $diff;
-my $readfile;
 my $screen_width;
 my $column_width;
 
@@ -95,8 +92,6 @@ my @optargs = (
     "mark!" => \$opt_mark,
     "l" => \$opt_l,
     "s" => \$opt_s,
-    "1" => \$opt_1,
-    "2" => \$opt_2,
     "b" => \$opt_b,
     "i" => \$opt_i,
     "w=i" => \$opt_w,
@@ -107,12 +102,13 @@ my @optargs = (
 
     "env!" => \$opt_env,
     "diff=s" => \$diff,
+    "diffopts=s" => \@opt_diffopts,
     "color!" => \$opt_color,
     "colormap|cm=s" => \@opt_colormap,
-    "c|context" => sub { push(@diffopts, "-c") },
-    "u|unified" => sub { push(@diffopts, "-u") },
-    "C=i" => sub { push(@diffopts, "-C" . ($_[1] > 0 ? $_[1] : '')) },
-    "U=i" => sub { push(@diffopts, "-U" . ($_[1] > 0 ? $_[1] : '')) },
+    "c|context" => sub { push(@opt_diffopts, "-c") },
+    "u|unified" => sub { push(@opt_diffopts, "-u") },
+    "C=i" => sub { push(@opt_diffopts, "-C" . ($_[1] > 0 ? $_[1] : '')) },
+    "U=i" => sub { push(@opt_diffopts, "-U" . ($_[1] > 0 ? $_[1] : '')) },
     "cdif" => \$opt_cdif,
     "cdifopts" => \@opt_cdifopts,
 
@@ -125,17 +121,17 @@ GetOptions(@optargs) || usage();
 my %colormap = (
     OCOMMAND => "CSE",
     NCOMMAND => "MSE",
-    OFILE    => "CDE",
-    NFILE    => "MDE",
-    OMARK    => "Cw" ,
-    NMARK    => "Mw" ,
-    UMARK    => "w"  ,
-    OLINE    => "Y" ,
-    NLINE    => "Y" ,
-    ULINE    => "Y"  ,
-    OTEXT    => "C"  ,
-    NTEXT    => "M"  ,
-    UTEXT    => ""   ,
+    OFILE => "CDE",
+    NFILE => "MDE",
+    OMARK => "wC",
+    NMARK => "wM",
+    UMARK => "w",
+    OLINE => "Y",
+    NLINE => "Y",
+    ULINE => "Y",
+    OTEXT => "C",
+    NTEXT => "M",
+    UTEXT => "",
     );
 
 if (@opt_colormap) {
@@ -155,14 +151,14 @@ $diff ||= 'diff';
 my($OLD, $NEW, $DIFF);
 if (@ARGV == 2) {
     ($OLD, $NEW) = @ARGV;
-    $DIFF = "$diff @diffopts $OLD $NEW |";
+    $DIFF = "$diff @opt_diffopts $OLD $NEW |";
 } elsif (@ARGV < 2) {
     $DIFF = shift || '-';
     $opt_s++;
 } else {
     usage("Unexpected arguments.\n\n");
 }
-$readfile = ($OLD and $NEW) && !($opt_s || $opt_c || $opt_u);
+my $readfile = ($OLD and $NEW) && !($opt_s || $opt_c || $opt_u);
 
 sub usage {
     select STDERR;
@@ -220,7 +216,7 @@ use constant {
 };
 my $diff_mode = DIFF_UNDEF;
 
-DIFF: while (<DIFF>) {
+while (<DIFF>) {
     my @old;
     my @new;
     my($left, $ctrl, $right);
@@ -389,9 +385,8 @@ sub merge_diffc {
 
 sub flush_buffer {
 
+    push @_, [] while @_ % 3;
     while (my($s, $o, $n) = splice(@_, 0, 3)) {
-	$o //= [];
-	$n //= [];
 
 	for (@$s) {
 	    print_column($column_width, $_, ' ', ' ', $_);
@@ -443,15 +438,6 @@ sub linenum {
 sub print_column {
     my($width, $old, $omark, $nmark, $new, $noline) = @_;
     my $print_number = ($opt_n and not $noline);
-
-    if ($opt_1) {
-	print $old if defined $old;
-	return;
-    }
-    if ($opt_2) {
-	print $new if defined $new;
-	return;
-    }
 
     my($onum, $nnum, $nspace) = ('', '', '');
     if ($print_number) {
@@ -666,7 +652,7 @@ sub terminal_width {
     if (-t STDERR) {
 	my $stty = `stty -f /dev/stderr all`; # XXX too easy...
 	if ($stty =~ /(\d+) +columns/) {
-	    $width = $1;
+	    $width = $1 if $1;
 	}
     }
     $width;
