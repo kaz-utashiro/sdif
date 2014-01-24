@@ -20,7 +20,7 @@ $Data::Dumper::Terse = 1;
 ## Copyright (c) 1992-2014 Kazumasa Utashiro
 ##
 ## Original version on Jul 24 1991
-;; my $rcsid = q$Id: sdif,v 2.3 2014/01/24 10:19:48 utashiro Exp $;
+;; my $rcsid = q$Id: sdif,v 2.4 2014/01/24 23:46:31 utashiro Exp $;
 ##
 ## Use and redistribution for ANY PURPOSE are granted as long as all
 ## copyright notices are retained.  Redistribution with modification
@@ -57,7 +57,8 @@ diff ... | sdif
     -u, -U#		unified diff
 
     --cdif		use ``cdif'' as word context diff backend
-    --cdifopts		set ``cdif'' command options
+    --cdifopts		set cdif command options
+    --mecab		pass --mecab option to cdif
 
 =cut
 
@@ -73,7 +74,7 @@ my $opt_U;
 my $opt_truncate;
 my $opt_onword;
 my $opt_cdif;
-my @opt_cdifopts;
+my @opt_cdifopts = qw(--nocc --nomc --notc);
 my $opt_env;
 my @opt_colormap;
 my @opt_diffopts;
@@ -239,7 +240,7 @@ if ($opt_cdif) {
 	if ($DIFF ne '-') {
 	    open(STDIN, $DIFF) || die "cannot open diff: $!\n";
 	}
-	do { exec join ' ', qw(cdif --nocc --nomc --notc), @opt_cdifopts } ;
+	do { exec join ' ', 'cdif', @opt_cdifopts } ;
 	warn "exec failed: $!";
 	print while <>;
 	exit;
@@ -411,16 +412,16 @@ sub merge_diffc {
 	    }
 	}
 	elsif (@o) {
-	    push @{$slot[0]}, shift @o while @o and $o[0] =~ /^  /;
+	    push(@{$slot[0]}, shift @o) while @o and $o[0] =~ /^  /;
 	}
 	elsif (@n) {
-	    push @{$slot[0]}, shift @n while @n and $n[0] =~ /^  /;
+	    push(@{$slot[0]}, shift @n) while @n and $n[0] =~ /^  /;
 	}
 
-	push @{$slot[1]}, shift @o while @o and $o[0] =~ /^\- /;
+	push(@{$slot[1]}, shift @o) while @o and $o[0] =~ /^\- /;
 	next if @{$slot[1]};
 
-	push @{$slot[2]}, shift @n while @n and $n[0] =~ /^\+ /;
+	push(@{$slot[2]}, shift @n) while @n and $n[0] =~ /^\+ /;
 	next if @{$slot[2]};
 
 	push(@{$slot[1]}, shift @o) while @o and $o[0] =~ /^! /;
@@ -506,14 +507,13 @@ sub print_column {
 
     my $expand_right = $colormap{NTEXT} =~ /E/ || $nmarkpos eq RIGHT;
 
-    my($o, $n);
     while (1) {
-	($o, $old) = fold($old,
-			  max(1, $width - length($onum . $nspace)),
-			  onword => $opt_onword, pad => 1);
-	($n, $new) = fold($new,
-			  max(1, $width - length($nnum . $nspace)),
-			  onword => $opt_onword, pad => 1);
+	(my $o, $old) = fold($old,
+			     max(1, $width - length($onum . $nspace)),
+			     onword => $opt_onword, pad => 1);
+	(my $n, $new) = fold($new,
+			     max(1, $width - length($nnum . $nspace)),
+			     onword => $opt_onword, pad => 1);
 
 	my %f;
 	$f{OMARK} = $colorize->($OMARK, $omark);
@@ -773,12 +773,12 @@ __END__
 
 =head1 DESCRIPTION
 
-Sdif is inspired by System V sdiff(1) command.  The basic feature of
-sdif and sdiff is making a side-by-side listing of two different
+B<sdif> is inspired by System V L<sdiff(1)> command.  The basic
+feature of sdif is making a side-by-side listing of two different
 files.  All contents of two files are listed on left and right sides.
-Center column is used to indicate how different the line.  No mark
-means there is no difference.  Added, deleted and modified lines are
-marked with `<' and `>' character.
+Center column is used to indicate how different those lines.  No mark
+means no difference.  Added, deleted and modified lines are marked
+with `<' and `>' character.
 
     1 deleted  <
     2 same          1 same
@@ -786,11 +786,27 @@ marked with `<' and `>' character.
     4 same          3 same
                 >   4 added
 
+It also reads and formats the output from B<diff> command from
+standard input.  Besides normal diff output, context diff I<-c> and
+unified diff I<-u> output will be handled properly.
+
+Each lines can be displayed in different colors.  Read B<--colormap>
+section in ths manual for detail.
+
+While B<sdif> doesn't care about the contents of each modified lines,
+it can read the output from B<cdif> command which show the word
+context differences of each lines.  Option B<--cdif> set the
+appropriate options for B<cdif>.  Set I<--nocc>, I<--nomc> options at
+least when invoking B<cdif> manually.  Option I<--notc> is pereferable
+because text color can be handled by B<sdif>.
+
+Environment valuable B<SDIFOPTS> is used to set default options.
+
 =head1 OPTIONS
 
 =over 7
 
-=item B<--w>=I<width>, -w
+=item B<--w>=I<width>, B<-w>
 
 Use width as a width of output listing.  Default width is 80.  If the
 standard error is assinged to a terminal, the width is taken from it
@@ -827,6 +843,11 @@ Use B<cdif> command instead of normal diff command.
 
 Specify options for backend B<cdif> command.
 
+=item B<--mecab>
+
+Pass B<--mecab> option to backend B<cdif> command.  Use B<--cdifopts>
+to set other options.
+
 =item B<--diff>=I<command>
 
 Any command can be specified as a diff command to be used.  Piping
@@ -853,19 +874,13 @@ Basic I<colormap> format is :
 
 where the FIELD is one from these :
 
-    OCOMMAND Old command line
-    NCOMMAND Old command line
-    OFILE    Old filename
-    NFILE    New filename
-    OMARK    Old mark
-    NMARK    New mark
-    UMARK    Unchanged mark
-    OLINE    Old line
-    NLINE    New line
-    ULINE    Unchanged line
-    OTEXT    Old text
-    NTEXT    New text
-    UTEXT    Unchanged text
+    OLD       NEW       UNCHANGED
+    --------- --------- ---------
+    OCOMMAND  NCOMMAND           : Command line
+    OFILE     NFILE              : File name
+    OMARK     NMARK     UMARK    : Mark
+    OLINE     NLINE     ULINE    : Line number
+    OTEXT     NTEXT     UTEXT    : Text
 
 You can make multiple filelds same color joining them by = :
 
@@ -948,8 +963,11 @@ https://github.com/kaz-utashiro/
 
 =head1 SEE ALSO
 
-perl(1),
-diff(1),
-cdif(1)
+L<perl(1)>,
+L<diff(1)>,
+L<cdif(1)>
+
+L<cdif|https://github.com/kaz-utashiro/cdif>,
+L<sdif|https://github.com/kaz-utashiro/sdif>
 
 =cut
