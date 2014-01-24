@@ -63,6 +63,8 @@ my $opt_q;
 my $opt_d;
 my $opt_c;
 my $opt_u;
+my $opt_C;
+my $opt_U;
 my $opt_truncate;
 my $opt_onword;
 my $opt_cdif;
@@ -70,7 +72,7 @@ my @opt_cdifopts;
 my $opt_env;
 my @opt_colormap;
 my @opt_diffopts;
-my $diff;
+my $opt_diff = 'diff';
 my $screen_width;
 my $column_width;
 
@@ -103,14 +105,14 @@ my @optargs = (
     "man" => sub { pod2usage({-verbose => 2}) },
 
     "env!" => \$opt_env,
-    "diff=s" => \$diff,
+    "diff=s" => \$opt_diff,
     "diffopts=s" => \@opt_diffopts,
     "color!" => \$opt_color,
     "colormap|cm=s" => \@opt_colormap,
-    "c|context" => sub { push(@opt_diffopts, "-c") },
-    "u|unified" => sub { push(@opt_diffopts, "-u") },
-    "C=i" => sub { push(@opt_diffopts, "-C" . ($_[1] > 0 ? $_[1] : '')) },
-    "U=i" => sub { push(@opt_diffopts, "-U" . ($_[1] > 0 ? $_[1] : '')) },
+    "c|context" => \$opt_c,
+    "u|unified" => \$opt_u,
+    "C=i" => \$opt_C,
+    "U=i" => \$opt_U,
     "cdif" => \$opt_cdif,
     "cdifopts=s" => \@opt_cdifopts,
 
@@ -157,19 +159,24 @@ if ($opt_color) {
     $colorize = sub { $_[1] } ;
 }
 
-$diff ||= 'diff';
+push(@opt_diffopts, "-c") if $opt_c;
+push(@opt_diffopts, "-u") if $opt_u;
+push(@opt_diffopts, "-C$opt_C") if defined $opt_C;
+push(@opt_diffopts, "-U$opt_U") if defined $opt_U;
 
 my($OLD, $NEW, $DIFF);
 if (@ARGV == 2) {
     ($OLD, $NEW) = @ARGV;
-    $DIFF = "$diff @opt_diffopts $OLD $NEW |";
+    $DIFF = "$opt_diff @opt_diffopts $OLD $NEW |";
 } elsif (@ARGV < 2) {
     $DIFF = shift || '-';
     $opt_s++;
 } else {
     usage("Unexpected arguments.\n\n");
 }
-my $readfile = ($OLD and $NEW) && !($opt_s || $opt_c || $opt_u);
+my $readfile =
+     ($OLD and $NEW)
+     && !($opt_s || $opt_c || $opt_u || (defined $opt_C || defined $opt_U));
 
 sub usage {
     select STDERR;
@@ -548,10 +555,9 @@ sub print_command {
 	$ncolor = "N" . $opt{type};
     }
 
-    print_fields({OMARK => " ", NMARK => " ",
-		  OTEXT => $colorize->($ocolor, $o),
-		  NTEXT => $colorize->($ncolor, $n),
-		 });
+    print_fields( { OMARK => " ", NMARK => " ",
+		    OTEXT => $colorize->($ocolor, $o),
+		    NTEXT => $colorize->($ncolor, $n) } );
 }
 
 sub print_fields {
@@ -564,7 +570,7 @@ sub print_fields {
     $_ = $F->{NMARK} and print if $nmarkpos eq LEFT;
     $_ = $F->{NLINE} and print;
     $_ = $F->{NTEXT} and print;
-    $_ = $F->{OMARK} and print if $nmarkpos eq RIGHT;
+    $_ = $F->{NMARK} and print if $nmarkpos eq RIGHT;
     print "\n";
 }
 
