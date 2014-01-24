@@ -44,9 +44,14 @@ diff ... | sdif
 
     --number, -n	print line number
     --truncate, -t	truncate long line
-    --onword		fold line onword boundaries
-    --width, -w		specify width of output (default is 80)
-    --cdif		use "cdif"
+    --onword		fold line on word boundaries
+    --width, -w #	specify width of output (default is 80)
+    --diff=s		set diff command
+    --diffopts=s	set diff command options
+    --cdif		use ``cdif'' as word context diff backend
+    --cdifopts		set ``cdif'' command options
+    --[no]color		use color or not
+    --colormap, --cm	specify color map
 
 =cut
 
@@ -713,97 +718,149 @@ __END__
 
 =head1 DESCRIPTION
 
-Sdif is a clone of System V sdiff(1) command.  The basic feature of
+Sdif is inspired by System V sdiff(1) command.  The basic feature of
 sdif and sdiff is making a side-by-side listing of two different
-files.  It makes much easier to compare two files than looking at the
-normal diff output.  All contents of two files a listed on left and
-right sides.  Center column is used to indicate how different the
-line.  No mark means there is no difference.  The line only included
-in left file is indicated by `<' mark, and `>' is used to lines only
-in right file.  Modified line has a mark `|'.  Example output from
-sdif is like this:
+files.  All contents of two files are listed on left and right sides.
+Center column is used to indicate how different the line.  No mark
+means there is no difference.  The line only included in left file is
+indicated by `<' mark, and `>' is used to lines only in right file.
+Modified lines have both.  Example output from sdif is like this:
 
-     1    deleted       <
-     2    same             1    same
-     3    changed       |  2    modified
-     4    same             3    same
-                        >  4    added
-
-
-Sdif has some incompatibilities with original sdiff.  Negative
-incompatibility is a lack of -o option and expanding all tabs to
-spaces.  Other incompatibilities are:
-
-     o line numbering
-     o folding a long line
-     o context diff support
-     o unified diff support
-     o option to keep diff mark
-     o handle backspace and carriage return
-     o default width is 80
-     o cdif (word context diff) support
-     o read diff data from file or stdin
-
+    1 deleted  <
+    2 same          1 same
+    3 changed  <>   2 modified
+    4 same          3 same
+                >   4 added
 
 =head1 OPTIONS
 
 =over 7
 
-=item -w width
+=item B<-w>I<width>
 
-Use width as a width of output listing.  Default width is 80.
-Original sdiff has a default value 130 but nobody uses 132 column line
-printer in these days.  If the standard error is to a terminal, the
-width of that terminal is taken as a output width if possible.
+Use width as a width of output listing.  Default width is 80.  If the
+standard error is assinged to a terminal, the width is taken from it
+if possible.
 
-=item -l
-
-Print only left column if the line is identical.
-
-=item -s
-
-Silent.  No output for identical lines.  Reading diff output from file
-or stdin put this switch on automatically.
-
-=item -n
+=item B<--number>, B<-n>
 
 Print line number on each lines.
 
-=item -f
+=item B<--truncate>, B<-t>
 
-Fold the line if it is longer than printing width.  Folded line is
-indicated by `+' mark at top of the line.  No continue mark is printed
-when numbering option is on.
+Truncate lines if they are longer than printing width.
 
-=item -F
+=item B<--onword>
+
 Fold longs line at word boundaries.
 
-=item -cdif
+=item B<--cdif>
 
-Use cdif command instead of normal diff command.
+Use B<cdif> command instead of normal diff command.
 
-=item -b, -w, -c, -u, -B
+=item B<-b>, B<-w>, B<-B>, B<-c>, B<-C>, B<-u>, B<-U>
 
-Passed through to the back-end diff command.  Sdif can process the
-output from context diff (-c) and unified diff (-u) if those are
-available.  These are sometimes useful because you can get only
-modified part of text.  Option -B is valid only for cdif.
+Passed through to the back-end diff command.  Sdif can interpret the
+output from normal, context (I<diff -c>) and unified diff (I<diff
+-u>).
 
-If you want to pass a option not listed here, please use
--diff="cdif ..." option.
+=item B<--diff>=I<command>
 
-=item -diff=command
+Any command can be specified as a diff command to be used.  Piping
+output to B<sdif> is easier unless you want to get whole text.
 
-Any command can be specified as a diff command to be used.  However
-piping output to sdif is usually easier unless you want to get whole
-text.
+=item B<-->[B<no>]B<color>
 
-=item -1, -2
+Use ANSI color escape sequence for output.
 
-Only old file is printed when option -1 is supplied and only new file
-with -2 option.  These are almost useless with normal diff because
-``sdif -1 A B'' is equivalent to ``cat A'', but probably make some
-sense with -cdif option.
+=item B<--colormap>=I<colormap>, B<--cm>=I<colormap>
+
+Basic I<colormap> format is :
+
+    FIELD=COLOR
+
+where the FIELD is one from these :
+
+    OCOMMAND Old command line
+    NCOMMAND Old command line
+    OFILE    Old filename
+    NFILE    New filename
+    OMARK    Old mark
+    NMARK    New mark
+    UMARK    Unchanged mark
+    OLINE    Old line
+    NLINE    New line
+    ULINE    Unchanged line
+    OTEXT    Old text
+    NTEXT    New text
+    UTEXT    Unchanged text
+
+You can make multiple filelds same color joining them by = :
+
+    FIELD1=FIELD2=...=COLOR
+
+Also wildcard can be used for field name :
+
+    *CHANGE=BDw
+
+Multiple fields can be specified by repeating options
+
+    --cm FILED1=COLOR1 --cm FIELD2=COLOR2 ...
+
+or combined with comma (,) :
+
+    --cm FILED1=COLOR1,FIELD2=COLOR2, ...
+
+COLOR is combination of single character representing uppercase
+foreground color :
+
+    R  Red
+    G  Green
+    B  Blue
+    C  Cyan
+    M  Magenta
+    Y  Yellow
+    K  Black
+    W  White
+
+and corresponding lowercase background color :
+
+    r, g, b, c, m, y, k, w
+
+and other effects :
+
+    S  Standout (reverse video)
+    U  Underline
+    D  Double-struck (boldface)
+    F  Flash (blink)
+    E  Expand
+
+B<E> is effective for command, file and text line.  That line will be
+expanded to window width filling up by space characters.  Left column
+is expanded always.  You may want to use this to set background color
+for right column.
+
+Defaults are :
+
+    OCOMMAND => "CSE"
+    NCOMMAND => "MSE"
+    OFILE    => "CDE"
+    NFILE    => "MDE"
+    OMARK    => "Cw"
+    NMARK    => "Mw"
+    UMARK    => "w"
+    OLINE    => "Y"
+    NLINE    => "Y"
+    ULINE    => "Y"
+    OTEXT    => "C"
+    NTEXT    => "M"
+    UTEXT    => ""
+
+This is equivalent to :
+
+    cdif --cm 'OCOMMAND=CSE,NCOMMAND=MSE,OFILE=CDE,NFILE=MDE' \
+         --cm 'OMARK=Cw,NMARK=Mw,UMARK=w' \
+         --cm '*LINE=Y,OTEXT=C,NTEXT=M,UTEXT='
 
 =back
 
