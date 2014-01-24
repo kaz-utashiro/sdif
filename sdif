@@ -112,7 +112,7 @@ my @optargs = (
     "C=i" => sub { push(@opt_diffopts, "-C" . ($_[1] > 0 ? $_[1] : '')) },
     "U=i" => sub { push(@opt_diffopts, "-U" . ($_[1] > 0 ? $_[1] : '')) },
     "cdif" => \$opt_cdif,
-    "cdifopts" => \@opt_cdifopts,
+    "cdifopts=s" => \@opt_cdifopts,
 
     "--mecab" => sub { push @opt_cdifopts, "--mecab" },
 );
@@ -493,13 +493,10 @@ sub print_column {
     $nmark =~ s/[<>]/>/ if $nmarkpos eq LEFT;
     $nmark =~ s/[<>]/</ if $nmarkpos eq RIGHT;
 
-    my $modified = "$omark$nmark" =~ /\S/;
-    my $OTEXT = $modified && $old ? "OTEXT" : "UTEXT";
-    my $NTEXT = $modified && $new ? "NTEXT" : "UTEXT";
-    my $OLINE = $modified ? "OLINE" : "ULINE";
-    my $NLINE = $modified ? "NLINE" : "ULINE";
-    my $OMARK = $modified ? "OMARK" : "UMARK";
-    my $NMARK = $modified ? "NMARK" : "UMARK";
+    my($OTEXT, $OLINE, $OMARK) =
+	$omark =~ /\S/ ? qw(OTEXT OLINE OMARK) : qw(UTEXT ULINE UMARK);
+    my($NTEXT, $NLINE, $NMARK) =
+	$nmark =~ /\S/ ? qw(NTEXT NLINE NMARK) : qw(UTEXT ULINE UMARK);
 
     my $expand_right = $colormap{NTEXT} =~ /E/ || $nmarkpos eq RIGHT;
 
