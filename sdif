@@ -458,12 +458,13 @@ sub print_identical {
 	my $new = <NEW>;
 	defined $old or defined $new or last;
 	if ($opt_l) {
-	    print linenum($oline) if $opt_n;
+	    print linenum($oline), " " if $opt_n;
 	    print expand_tab($old);
 	} else {
 	    print_column($column_width, $old, ' ', ' ', $new);
 	}
-	$oline++; $nline++;
+	$oline++;
+	$nline++;
     }
 }
 
@@ -475,10 +476,9 @@ sub linenum {
 sub print_column {
     my($width, $old, $omark, $nmark, $new, $noline) = @_;
     my $print_number = ($opt_n and not $noline);
-    my $orig_width = $width;
 
     my($onum, $nnum) = ('', '');
-    my $nspace = ' ';
+    my $nspace = $print_number ? ' ' : '';
     if (defined $old) {
 	chomp $old;
 	$old = expand_tab($old);
