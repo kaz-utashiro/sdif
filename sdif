@@ -52,6 +52,7 @@ diff ... | sdif
     --cdifopts		set ``cdif'' command options
     --[no]color		use color or not
     --colormap, --cm	specify color map
+    --mark=position	mark position (right, left, center, side) or no
 
 =cut
 
@@ -61,8 +62,6 @@ my $opt_s;
 my $opt_q;
 my $opt_d;
 my $opt_c;
-my $opt_b;
-my $opt_i;
 my $opt_u;
 my $opt_truncate;
 my $opt_onword;
@@ -76,7 +75,7 @@ my $screen_width;
 my $column_width;
 
 my $opt_color = 1;
-my $opt_mark = 1;
+my $opt_mark = "center";
 my $opt_w;
 
 ##
@@ -94,11 +93,9 @@ my @optargs = (
     "n|number!" => \$opt_n,
     "truncate|t!" => \$opt_truncate,
     "onword|W!" => \$opt_onword,
-    "mark!" => \$opt_mark,
+    "mark=s" => \$opt_mark,
     "l" => \$opt_l,
     "s" => \$opt_s,
-    "b" => \$opt_b,
-    "i" => \$opt_i,
     "w=i" => \$opt_w,
 
     "d+" => \$opt_d,
@@ -120,8 +117,11 @@ my @optargs = (
     "--mecab" => sub { push @opt_cdifopts, "--mecab" },
 );
 
+my @SAVEDARGV = @ARGV;
 Getopt::Long::Configure("bundling");
 GetOptions(@optargs) || usage();
+
+warn "\@ARGV = (@SAVEDARGV)\n" if $opt_d;
 
 my %colormap = (
     OCOMMAND => "CSE",
@@ -179,8 +179,28 @@ sub usage {
     exit;
 }
 
+use constant {
+    RIGHT => 'right',
+    LEFT => 'left',
+    NO => 'no',
+};
+my %markpos = (
+    center => [ RIGHT, LEFT  ],
+    side   => [ LEFT,  RIGHT ],
+    right  => [ RIGHT, RIGHT ],
+    left   => [ LEFT,  LEFT  ],
+    no     => [ NO,    NO    ],
+    );
+my($omarkpos, $nmarkpos);
+if (my $pos = $markpos{$opt_mark}) {
+    ($omarkpos, $nmarkpos) = @$pos;
+} else {
+    my @keys = sort keys %markpos;
+    usage "Use one from (@keys) for option --mark\n\n"
+}
+
 $screen_width = $opt_w || &terminal_width;
-$column_width = max(1, int(($screen_width - ($opt_mark ? 2 : 0)) / 2));
+$column_width = max(1, int(($screen_width - ($opt_mark ne NO ? 2 : 0)) / 2));
 
 if ($opt_d) {
     printf STDERR "\$OLD = %s\n", $OLD // "undef";
@@ -468,6 +488,11 @@ sub print_column {
 	$nnum = linenum($nline) if $print_number;
     }
 
+    $omark =~ s/[<>]/>/ if $omarkpos eq LEFT;
+    $omark =~ s/[<>]/</ if $omarkpos eq RIGHT;
+    $nmark =~ s/[<>]/>/ if $nmarkpos eq LEFT;
+    $nmark =~ s/[<>]/</ if $nmarkpos eq RIGHT;
+
     my $modified = "$omark$nmark" =~ /\S/;
     my $OTEXT = $modified && $old ? "OTEXT" : "UTEXT";
     my $NTEXT = $modified && $new ? "NTEXT" : "UTEXT";
@@ -476,19 +501,23 @@ sub print_column {
     my $OMARK = $modified ? "OMARK" : "UMARK";
     my $NMARK = $modified ? "NMARK" : "UMARK";
 
+    my $expand_right = $colormap{NTEXT} =~ /E/ || $nmarkpos eq RIGHT;
+
     my($o, $n);
     while (1) {
 	($o, $old) = fold($old // "", $width, onword => $opt_onword,
 			  pad => 1);
 	($n, $new) = fold($new // "", $width, onword => $opt_onword,
-			  pad => ($colormap{NTEXT} =~ /E/ ? 1 : 0));
+			  pad => $expand_right);
 
+	print $colorize->($OMARK, $omark) if $omarkpos eq LEFT;
 	print $colorize->($OLINE, $onum), $nspace if $print_number;
 	print $colorize->($OTEXT, $o) if $o ne "";
-	print $colorize->($OMARK, $omark) if $opt_mark;
-	print $colorize->($NMARK, $nmark) if $opt_mark;
+	print $colorize->($OMARK, $omark) if $omarkpos eq RIGHT;
+	print $colorize->($NMARK, $nmark) if $nmarkpos eq LEFT;
 	print $colorize->($NLINE, $nnum), $nspace if $print_number;
 	print $colorize->($NTEXT, $n) if $n ne "";
+	print $colorize->($OMARK, $nmark) if $nmarkpos eq RIGHT;
 	print "\n";
 
 	last if $opt_truncate;
@@ -522,10 +551,20 @@ sub print_command {
 	$ocolor = "O" . $opt{type};
 	$ncolor = "N" . $opt{type};
     }
+
+    print " " if $omarkpos eq LEFT;
     print $colorize->($ocolor, $o);
-    print "  " if $opt_mark;
+    print " " if $omarkpos eq RIGHT;
+    print " " if $nmarkpos eq LEFT;
     print $colorize->($ncolor, $n);
+    print " " if $nmarkpos eq RIGHT;
     print "\n";
+}
+
+sub print_files {
+    my($oline, $otext, $omark, $nmark, $nline, $ntext, $noline) = @_;
+    my $print_number = ($opt_n and not $noline);
+
 }
 
 my $wchars;
@@ -729,9 +768,8 @@ Sdif is inspired by System V sdiff(1) command.  The basic feature of
 sdif and sdiff is making a side-by-side listing of two different
 files.  All contents of two files are listed on left and right sides.
 Center column is used to indicate how different the line.  No mark
-means there is no difference.  The line only included in left file is
-indicated by `<' mark, and `>' is used to lines only in right file.
-Modified lines have both.  Example output from sdif is like this:
+means there is no difference.  Added, deleted and modified lines are
+marked with `<' and `>' character.
 
     1 deleted  <
     2 same          1 same
@@ -743,7 +781,7 @@ Modified lines have both.  Example output from sdif is like this:
 
 =over 7
 
-=item B<-w>I<width>
+=item B<--w>=I<width>, -w
 
 Use width as a width of output listing.  Default width is 80.  If the
 standard error is assinged to a terminal, the width is taken from it
@@ -776,9 +814,14 @@ output from normal, context (I<diff -c>) and unified diff (I<diff
 Any command can be specified as a diff command to be used.  Piping
 output to B<sdif> is easier unless you want to get whole text.
 
+=item B<--mark>=I<position>
+
+Specify the position for mark.  Choose from I<left>, I<right>,
+I<center>, I<side> or I<no>.  Default is I<center>.
+
 =item B<-->[B<no>]B<color>
 
-Use ANSI color escape sequence for output.
+Use ANSI color escape sequence for output.  Default is true.
 
 =item B<--colormap>=I<colormap>, B<--cm>=I<colormap>
 
