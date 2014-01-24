@@ -70,7 +70,7 @@ my $diff;
 my $screen_width;
 my $column_width;
 
-my $opt_color;
+my $opt_color = 1;
 my $opt_mark = 1;
 my $opt_w;
 
@@ -134,16 +134,22 @@ my %colormap = (
     UTEXT => "",
     );
 
-if (@opt_colormap) {
-    map {
-	my $c = pop @$_;
-	map { $colormap{$_} = $c }
-	map { match_glob $_, keys %colormap }
-	@$_;
+my $colorize;
+if ($opt_color) {
+    if (@opt_colormap) {
+	map {
+	    my $c = pop @$_;
+	    map { $colormap{$_} = $c }
+	    map { match_glob $_, keys %colormap }
+	    @$_;	
+	}	
+	map { [ split /=/, $_, -1 ] }
+	map { split /,/ }
+	@opt_colormap;
     }
-    map { [ split /=/, $_, -1 ] }
-    map { split /,/ }
-    @opt_colormap;
+    $colorize = \&color;
+} else {
+    $colorize = sub { $_[1] } ;
 }
 
 $diff ||= 'diff';
@@ -472,11 +478,12 @@ sub print_column {
 	($n, $new) = fold($new // "", $width, onword => $opt_onword,
 			  pad => ($colormap{NTEXT} =~ /E/ ? 1 : 0));
 
-	print color($OLINE, $onum), $nspace if $print_number;
-	print color($OTEXT, $o) if $o ne "";
-	print color($OMARK, $omark), color($NMARK, $nmark) if $opt_mark;
-	print color($NLINE, $nnum), $nspace if $print_number;
-	print color($NTEXT, $n) if $n ne "";
+	print $colorize->($OLINE, $onum), $nspace if $print_number;
+	print $colorize->($OTEXT, $o) if $o ne "";
+	print $colorize->($OMARK, $omark) if $opt_mark;
+	print $colorize->($NMARK, $nmark) if $opt_mark;
+	print $colorize->($NLINE, $nnum), $nspace if $print_number;
+	print $colorize->($NTEXT, $n) if $n ne "";
 	print "\n";
 
 	last if $opt_truncate;
@@ -510,9 +517,9 @@ sub print_command {
 	$ocolor = "O" . $opt{type};
 	$ncolor = "N" . $opt{type};
     }
-    print color($ocolor, $o);
+    print $colorize->($ocolor, $o);
     print "  " if $opt_mark;
-    print color($ncolor, $n);
+    print $colorize->($ncolor, $n);
     print "\n";
 }
 
