@@ -43,6 +43,7 @@ sdif file_1 file_2
 diff ... | sdif
 
     --number, -n	print line number
+    --digit=n		set the line number digits (default 4)
     --truncate, -t	truncate long line
     --onword		fold line on word boundaries
     --width, -w #	specify width of output (default is 80)
@@ -73,6 +74,7 @@ my $opt_env;
 my @opt_colormap;
 my @opt_diffopts;
 my $opt_diff = 'diff';
+my $opt_digit = 4;
 my $screen_width;
 my $column_width;
 
@@ -93,6 +95,7 @@ if ($ENV{'SDIFOPTS'}) {
 
 my @optargs = (
     "n|number!" => \$opt_n,
+    "digit=i" => \$opt_digit,
     "truncate|t!" => \$opt_truncate,
     "onword|W!" => \$opt_onword,
     "mark=s" => \$opt_mark,
@@ -205,6 +208,8 @@ if (my $pos = $markpos{$opt_mark}) {
     my @keys = sort keys %markpos;
     usage "Use one from (@keys) for option --mark\n\n"
 }
+
+my $num_format = "%${opt_digit}d";
 
 $screen_width = $opt_w || &terminal_width;
 $column_width = max(1, int(($screen_width - ($opt_mark ne NO ? 2 : 0)) / 2));
@@ -462,28 +467,18 @@ sub print_identical {
     }
 }
 
-my $num_width;
-my $num_format;
-BEGIN {
-    $num_width = 4;
-    $num_format = "%${num_width}d";
-}
 sub linenum {
     my $n = shift;
-    defined $n ? (sprintf $num_format, $n) : (' ' x $num_width);
+    defined $n ? (sprintf $num_format, $n) : (' ' x $opt_digit);
 }
 
 sub print_column {
     my($width, $old, $omark, $nmark, $new, $noline) = @_;
     my $print_number = ($opt_n and not $noline);
+    my $orig_width = $width;
 
-    my($onum, $nnum, $nspace) = ('', '', '');
-    if ($print_number) {
-	$onum = ' ' x $num_width;
-	$nnum = ' ' x $num_width;
-	$nspace = ' ',
-	$width = max(1, $width - $num_width - length($nspace));
-    }
+    my($onum, $nnum) = ('', '');
+    my $nspace = ' ';
     if (defined $old) {
 	chomp $old;
 	$old = expand_tab($old);
@@ -495,31 +490,33 @@ sub print_column {
 	$nnum = linenum($nline) if $print_number;
     }
 
-    $omark =~ s/[<>]/>/ if $omarkpos eq LEFT;
-    $omark =~ s/[<>]/</ if $omarkpos eq RIGHT;
-    $nmark =~ s/[<>]/>/ if $nmarkpos eq LEFT;
-    $nmark =~ s/[<>]/</ if $nmarkpos eq RIGHT;
-
     my($OTEXT, $OLINE, $OMARK) =
 	$omark =~ /\S/ ? qw(OTEXT OLINE OMARK) : qw(UTEXT ULINE UMARK);
     my($NTEXT, $NLINE, $NMARK) =
 	$nmark =~ /\S/ ? qw(NTEXT NLINE NMARK) : qw(UTEXT ULINE UMARK);
 
+    $omark =~ s/\S/>/ if $omarkpos eq LEFT;
+    $omark =~ s/\S/</ if $omarkpos eq RIGHT;
+    $nmark =~ s/\S/>/ if $nmarkpos eq LEFT;
+    $nmark =~ s/\S/</ if $nmarkpos eq RIGHT;
+
     my $expand_right = $colormap{NTEXT} =~ /E/ || $nmarkpos eq RIGHT;
 
     my($o, $n);
     while (1) {
-	($o, $old) = fold($old // "", $width, onword => $opt_onword,
-			  pad => 1);
-	($n, $new) = fold($new // "", $width, onword => $opt_onword,
-			  pad => $expand_right);
+	($o, $old) = fold($old,
+			  max(1, $width - length($onum . $nspace)),
+			  onword => $opt_onword, pad => 1);
+	($n, $new) = fold($new,
+			  max(1, $width - length($nnum . $nspace)),
+			  onword => $opt_onword, pad => 1);
 
 	my %f;
 	$f{OMARK} = $colorize->($OMARK, $omark);
-	$f{OLINE} = $colorize->($OLINE, $onum) . " " if $print_number;
+	$f{OLINE} = $colorize->($OLINE, $onum) . $nspace if $print_number;
 	$f{OTEXT} = $colorize->($OTEXT, $o) if $o ne "";
 	$f{NMARK} = $colorize->($NMARK, $nmark);
-	$f{NLINE} = $colorize->($NLINE, $nnum) . " " if $print_number;
+	$f{NLINE} = $colorize->($NLINE, $nnum) . $nspace if $print_number;
 	$f{NTEXT} = $colorize->($NTEXT, $n) if $n ne "";
 	print_fields(\%f);
 
@@ -527,7 +524,8 @@ sub print_column {
 	last unless $old ne '' or $new ne '';
 
 	if ($print_number) {
-	    $onum = $nnum = linenum(undef);
+	    $onum =~ s/./ /g;
+	    $nnum =~ s/./ /g;
 	}
 	$omark = $old ne '' ? '.' : ' ';
 	$nmark = $new ne '' ? '.' : ' ';
@@ -589,7 +587,7 @@ BEGIN {
 }
 
 sub fold {
-    local $_ = shift;
+    local $_ = shift // "";
     my $width = shift;
     my %opt = @_ ? @_ : {};
 
@@ -798,6 +796,11 @@ if possible.
 
 Print line number on each lines.
 
+=item B<--digit>=I<n>
+
+Line number is diplayed in 4 digits by dafult.  Use this option to
+change it.
+
 =item B<--truncate>, B<-t>
 
 Truncate lines if they are longer than printing width.
@@ -816,10 +819,18 @@ Passed through to the back-end diff command.  Sdif can interpret the
 output from normal, context (I<diff -c>) and unified diff (I<diff
 -u>).
 
+=item B<--cdifopts>=I<option>
+
+Specify options for backend B<cdif> command.
+
 =item B<--diff>=I<command>
 
 Any command can be specified as a diff command to be used.  Piping
 output to B<sdif> is easier unless you want to get whole text.
+
+=item B<--diffopts>=I<option>
+
+Specify options for backend B<diff> command.
 
 =item B<--mark>=I<position>
 
