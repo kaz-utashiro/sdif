@@ -23,16 +23,17 @@ diff ... | sdif
     -u, -U#             unified diff
 
     --cdif              use ``cdif'' as word context diff backend
-    --cdifopts          set ``cdif'' command options
+    --cdifopts          set cdif command options
+    --mecab             pass --mecab option to cdif
 
 # DESCRIPTION
 
-Sdif is inspired by System V sdiff(1) command.  The basic feature of
-sdif and sdiff is making a side-by-side listing of two different
+__sdif__ is inspired by System V [sdiff(1)](http://man.he.net/man1/sdiff) command.  The basic
+feature of sdif is making a side-by-side listing of two different
 files.  All contents of two files are listed on left and right sides.
-Center column is used to indicate how different the line.  No mark
-means there is no difference.  Added, deleted and modified lines are
-marked with \`<' and \`>' character.
+Center column is used to indicate how different those lines.  No mark
+means no difference.  Added, deleted and modified lines are marked
+with \`<' and \`>' character.
 
     1 deleted  <
     2 same          1 same
@@ -40,9 +41,25 @@ marked with \`<' and \`>' character.
     4 same          3 same
                 >   4 added
 
+It also reads and formats the output from __diff__ command from
+standard input.  Besides normal diff output, context diff _-c_ and
+unified diff _-u_ output will be handled properly.
+
+Each lines can be displayed in different colors.  Read __--colormap__
+section in ths manual for detail.
+
+While __sdif__ doesn't care about the contents of each modified lines,
+it can read the output from __cdif__ command which show the word
+context differences of each lines.  Option __--cdif__ set the
+appropriate options for __cdif__.  Set _--nocc_, _--nomc_ options at
+least when invoking __cdif__ manually.  Option _--notc_ is pereferable
+because text color can be handled by __sdif__.
+
+Environment valuable __SDIFOPTS__ is used to set default options.
+
 # OPTIONS
 
-- __--w__=_width_, -w
+- __--w__=_width_, __-w__
 
     Use width as a width of output listing.  Default width is 80.  If the
     standard error is assinged to a terminal, the width is taken from it
@@ -79,6 +96,11 @@ marked with \`<' and \`>' character.
 
     Specify options for backend __cdif__ command.
 
+- __--mecab__
+
+    Pass __--mecab__ option to backend __cdif__ command.  Use __--cdifopts__
+    to set other options.
+
 - __--diff__=_command_
 
     Any command can be specified as a diff command to be used.  Piping
@@ -105,19 +127,13 @@ marked with \`<' and \`>' character.
 
     where the FIELD is one from these :
 
-        OCOMMAND Old command line
-        NCOMMAND Old command line
-        OFILE    Old filename
-        NFILE    New filename
-        OMARK    Old mark
-        NMARK    New mark
-        UMARK    Unchanged mark
-        OLINE    Old line
-        NLINE    New line
-        ULINE    Unchanged line
-        OTEXT    Old text
-        NTEXT    New text
-        UTEXT    Unchanged text
+        OLD       NEW       UNCHANGED
+        --------- --------- ---------
+        OCOMMAND  NCOMMAND           : Command line
+        OFILE     NFILE              : File name
+        OMARK     NMARK     UMARK    : Mark
+        OLINE     NLINE     ULINE    : Line number
+        OTEXT     NTEXT     UTEXT    : Text
 
     You can make multiple filelds same color joining them by = :
 
@@ -198,6 +214,9 @@ https://github.com/kaz-utashiro/
 
 # SEE ALSO
 
-perl(1),
-diff(1),
-cdif(1)
+[perl(1)](http://man.he.net/man1/perl),
+[diff(1)](http://man.he.net/man1/diff),
+[cdif(1)](http://man.he.net/man1/cdif)
+
+[cdif](https://github.com/kaz-utashiro/cdif),
+[sdif](https://github.com/kaz-utashiro/sdif)
