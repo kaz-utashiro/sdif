@@ -34,7 +34,7 @@ $Data::Dumper::Terse = 1;
 
 =head1 NAME
 
-sdif - sdiff clone
+sdif - side-by-side diff viewer for ANSI terminal
 
 =head1 SYNOPSIS
 
@@ -49,11 +49,15 @@ diff ... | sdif
     --width, -w #	specify width of output (default is 80)
     --diff=s		set diff command
     --diffopts=s	set diff command options
-    --cdif		use ``cdif'' as word context diff backend
-    --cdifopts		set ``cdif'' command options
     --[no]color		use color or not
     --colormap, --cm	specify color map
     --mark=position	mark position (right, left, center, side) or no
+    --man		display manual page
+    -c, -C#		context diff
+    -u, -U#		unified diff
+
+    --cdif		use ``cdif'' as word context diff backend
+    --cdifopts		set ``cdif'' command options
 
 =cut
 
@@ -801,6 +805,12 @@ Print line number on each lines.
 Line number is diplayed in 4 digits by dafult.  Use this option to
 change it.
 
+=item B<-c>, B<-C>I<n>, B<-u>, B<-U>I<n>
+
+Passed through to the back-end diff command.  Sdif can interpret the
+output from normal, context (I<diff -c>) and unified diff (I<diff
+-u>).
+
 =item B<--truncate>, B<-t>
 
 Truncate lines if they are longer than printing width.
@@ -812,12 +822,6 @@ Fold longs line at word boundaries.
 =item B<--cdif>
 
 Use B<cdif> command instead of normal diff command.
-
-=item B<-b>, B<-w>, B<-B>, B<-c>, B<-C>, B<-u>, B<-U>
-
-Passed through to the back-end diff command.  Sdif can interpret the
-output from normal, context (I<diff -c>) and unified diff (I<diff
--u>).
 
 =item B<--cdifopts>=I<option>
 
