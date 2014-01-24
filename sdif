@@ -507,15 +507,14 @@ sub print_column {
 	($n, $new) = fold($new // "", $width, onword => $opt_onword,
 			  pad => $expand_right);
 
-	print $colorize->($OMARK, $omark) if $omarkpos eq LEFT;
-	print $colorize->($OLINE, $onum), $nspace if $print_number;
-	print $colorize->($OTEXT, $o) if $o ne "";
-	print $colorize->($OMARK, $omark) if $omarkpos eq RIGHT;
-	print $colorize->($NMARK, $nmark) if $nmarkpos eq LEFT;
-	print $colorize->($NLINE, $nnum), $nspace if $print_number;
-	print $colorize->($NTEXT, $n) if $n ne "";
-	print $colorize->($OMARK, $nmark) if $nmarkpos eq RIGHT;
-	print "\n";
+	my %f;
+	$f{OMARK} = $colorize->($OMARK, $omark);
+	$f{OLINE} = $colorize->($OLINE, $onum) if $print_number;
+	$f{OTEXT} = $colorize->($OTEXT, $o) if $o ne "";
+	$f{NMARK} = $colorize->($NMARK, $nmark);
+	$f{NLINE} = $colorize->($NLINE, $nnum) if $print_number;
+	$f{NTEXT} = $colorize->($NTEXT, $n) if $n ne "";
+	print_fields(\%f);
 
 	last if $opt_truncate;
 	last unless $old ne '' or $new ne '';
@@ -549,19 +548,24 @@ sub print_command {
 	$ncolor = "N" . $opt{type};
     }
 
-    print " " if $omarkpos eq LEFT;
-    print $colorize->($ocolor, $o);
-    print " " if $omarkpos eq RIGHT;
-    print " " if $nmarkpos eq LEFT;
-    print $colorize->($ncolor, $n);
-    print " " if $nmarkpos eq RIGHT;
-    print "\n";
+    print_fields({OMARK => " ", NMARK => " ",
+		  OTEXT => $colorize->($ocolor, $o),
+		  NTEXT => $colorize->($ncolor, $n),
+		 });
 }
 
-sub print_files {
-    my($oline, $otext, $omark, $nmark, $nline, $ntext, $noline) = @_;
-    my $print_number = ($opt_n and not $noline);
-
+sub print_fields {
+    my $F = shift;
+    local $_;
+    $_ = $F->{OMARK} and print if $omarkpos eq LEFT;
+    $_ = $F->{OLINE} and print "$_ ";
+    $_ = $F->{OTEXT} and print;
+    $_ = $F->{OMARK} and print if $omarkpos eq RIGHT;
+    $_ = $F->{NMARK} and print if $nmarkpos eq LEFT;
+    $_ = $F->{NLINE} and print "$_ ";
+    $_ = $F->{NTEXT} and print;
+    $_ = $F->{OMARK} and print if $nmarkpos eq RIGHT;
+    print "\n";
 }
 
 my $wchars;
