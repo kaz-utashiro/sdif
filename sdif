@@ -938,6 +938,8 @@ Try next setting if you want to make modified section more visible.
 
     sdif -n --cdif --cm '[ON]TEXT=wE,UMARK=,OMARK=C,NMARK=M'
 
+=back
+
 =head1 AUTHOR
 
 Kazumasa Utashiro
