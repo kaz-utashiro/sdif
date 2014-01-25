@@ -1,0 +1,331 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Sdif by kaz-utashiro</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="javascripts/scale.fix.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1 class="header">Sdif</h1>
+        <p class="header">sdif - side-by-side diff viewer for ANSI terminal</p>
+
+        <ul>
+          <li class="download"><a class="buttons" href="https://github.com/kaz-utashiro/sdif/zipball/master">Download ZIP</a></li>
+          <li class="download"><a class="buttons" href="https://github.com/kaz-utashiro/sdif/tarball/master">Download TAR</a></li>
+          <li><a class="buttons github" href="https://github.com/kaz-utashiro/sdif">View On GitHub</a></li>
+        </ul>
+
+        <p class="header">This project is maintained by <a class="header name" href="https://github.com/kaz-utashiro">kaz-utashiro</a></p>
+
+
+      </header>
+      <section>
+        <h1>
+<a name="sdif" class="anchor" href="#sdif"><span class="octicon octicon-link"></span></a>SDIF</h1>
+
+<h3>
+<a name="is-side-by-side-diff-viewer" class="anchor" href="#is-side-by-side-diff-viewer"><span class="octicon octicon-link"></span></a>is Side-by-side diff viewer</h3>
+
+<h3>
+<a name="for-ansi-color-terminal" class="anchor" href="#for-ansi-color-terminal"><span class="octicon octicon-link"></span></a>for ANSI color terminal</h3>
+
+<h3>
+<a name="capable-of-word-contex-display-with-cdif" class="anchor" href="#capable-of-word-contex-display-with-cdif"><span class="octicon octicon-link"></span></a>capable of word contex display with CDIF</h3>
+
+<p>
+<a href="http://cdn-ak.f.st-hatena.com/images/fotolife/u/uta46/20140124/20140124233940.png">
+<img width="640" src="http://cdn-ak.f.st-hatena.com/images/fotolife/u/uta46/20140124/20140124233940.png" alt="f:id:uta46:20140124233940p:plain" title="f:id:uta46:20140124233940p:plain" itemprop="image"></a>
+</p>
+
+<h2>
+<a name="unicode-and-japanese-support" class="anchor" href="#unicode-and-japanese-support"><span class="octicon octicon-link"></span></a>Unicode and Japanese support</h2>
+
+<p>
+<a href="http://cdn-ak.f.st-hatena.com/images/fotolife/u/uta46/20140124/20140124234055.png">
+<img width="640" src="http://cdn-ak.f.st-hatena.com/images/fotolife/u/uta46/20140124/20140124234055.png" alt="f:id:uta46:20140124234055p:plain" title="f:id:uta46:20140124234055p:plain" itemprop="image"></a>
+</p>
+
+<h2>
+<a name="with---mecab-morphology" class="anchor" href="#with---mecab-morphology"><span class="octicon octicon-link"></span></a>with --mecab morphology</h2>
+
+<p>
+<a href="http://cdn-ak.f.st-hatena.com/images/fotolife/u/uta46/20140124/20140124234120.png">
+<img width="640" src="http://cdn-ak.f.st-hatena.com/images/fotolife/u/uta46/20140124/20140124234120.png" alt="f:id:uta46:20140124234120p:plain" title="f:id:uta46:20140124234120p:plain" itemprop="image"></a>
+</p>
+
+<h1>
+<a name="name" class="anchor" href="#name"><span class="octicon octicon-link"></span></a>NAME</h1>
+
+<p>sdif - side-by-side diff viewer for ANSI terminal</p>
+
+<h1>
+<a name="synopsis" class="anchor" href="#synopsis"><span class="octicon octicon-link"></span></a>SYNOPSIS</h1>
+
+<p>sdif file_1 file_2</p>
+
+<p>diff ... | sdif</p>
+
+<pre><code>--number, -n        print line number
+--digit=n           set the line number digits (default 4)
+--truncate, -t      truncate long line
+--onword            fold line on word boundaries
+--width, -w #       specify width of output (default is 80)
+--diff=s            set diff command
+--diffopts=s        set diff command options
+--[no]color         use color or not
+--colormap, --cm    specify color map
+--mark=position     mark position (right, left, center, side) or no
+--man               display manual page
+-c, -C#             context diff
+-u, -U#             unified diff
+
+--cdif              use ``cdif'' as word context diff backend
+--cdifopts          set cdif command options
+--mecab             pass --mecab option to cdif
+</code></pre>
+
+<h1>
+<a name="description" class="anchor" href="#description"><span class="octicon octicon-link"></span></a>DESCRIPTION</h1>
+
+<p><strong>sdif</strong> is inspired by System V <a href="http://man.he.net/man1/sdiff">sdiff(1)</a> command.  The basic
+feature of sdif is making a side-by-side listing of two different
+files.  All contents of two files are listed on left and right sides.
+Center column is used to indicate how different those lines.  No mark
+means no difference.  Added, deleted and modified lines are marked
+with `&lt;' and `&gt;' character.</p>
+
+<pre><code>1 deleted  &lt;
+2 same          1 same
+3 changed  &lt;&gt;   2 modified
+4 same          3 same
+            &gt;   4 added
+</code></pre>
+
+<p>It also reads and formats the output from <strong>diff</strong> command from
+standard input.  Besides normal diff output, context diff <em>-c</em> and
+unified diff <em>-u</em> output will be handled properly.</p>
+
+<p>Each lines can be displayed in different colors.  Read <strong>--colormap</strong>
+section in ths manual for detail.</p>
+
+<p>While <strong>sdif</strong> doesn't care about the contents of each modified lines,
+it can read the output from <strong>cdif</strong> command which show the word
+context differences of each lines.  Option <strong>--cdif</strong> set the
+appropriate options for <strong>cdif</strong>.  Set <em>--nocc</em>, <em>--nomc</em> options at
+least when invoking <strong>cdif</strong> manually.  Option <em>--notc</em> is pereferable
+because text color can be handled by <strong>sdif</strong>.</p>
+
+<p>Environment valuable <strong>SDIFOPTS</strong> is used to set default options.</p>
+
+<h1>
+<a name="options" class="anchor" href="#options"><span class="octicon octicon-link"></span></a>OPTIONS</h1>
+
+<ul>
+<li>
+<p><strong>--w</strong>=<em>width</em>, <strong>-w</strong></p>
+
+<p>Use width as a width of output listing.  Default width is 80.  If the
+standard error is assinged to a terminal, the width is taken from it
+if possible.</p>
+</li>
+<li>
+<p><strong>--number</strong>, <strong>-n</strong></p>
+
+<p>Print line number on each lines.</p>
+</li>
+<li>
+<p><strong>--digit</strong>=<em>n</em></p>
+
+<p>Line number is diplayed in 4 digits by dafult.  Use this option to
+change it.</p>
+</li>
+<li>
+<p><strong>-c</strong>, <strong>-C</strong>_n_, <strong>-u</strong>, <strong>-U</strong>_n_</p>
+
+<p>Passed through to the back-end diff command.  Sdif can interpret the
+output from normal, context (<em>diff -c</em>) and unified diff (<em>diff
+-u</em>).</p>
+</li>
+<li>
+<p><strong>--truncate</strong>, <strong>-t</strong></p>
+
+<p>Truncate lines if they are longer than printing width.</p>
+</li>
+<li>
+<p><strong>--onword</strong></p>
+
+<p>Fold longs line at word boundaries.</p>
+</li>
+<li>
+<p><strong>--cdif</strong></p>
+
+<p>Use <strong>cdif</strong> command instead of normal diff command.</p>
+</li>
+<li>
+<p><strong>--cdifopts</strong>=<em>option</em></p>
+
+<p>Specify options for backend <strong>cdif</strong> command.</p>
+</li>
+<li>
+<p><strong>--mecab</strong></p>
+
+<p>Pass <strong>--mecab</strong> option to backend <strong>cdif</strong> command.  Use <strong>--cdifopts</strong>
+to set other options.</p>
+</li>
+<li>
+<p><strong>--diff</strong>=<em>command</em></p>
+
+<p>Any command can be specified as a diff command to be used.  Piping
+output to <strong>sdif</strong> is easier unless you want to get whole text.</p>
+</li>
+<li>
+<p><strong>--diffopts</strong>=<em>option</em></p>
+
+<p>Specify options for backend <strong>diff</strong> command.</p>
+</li>
+<li>
+<p><strong>--mark</strong>=<em>position</em></p>
+
+<p>Specify the position for mark.  Choose from <em>left</em>, <em>right</em>,
+<em>center</em>, <em>side</em> or <em>no</em>.  Default is <em>center</em>.</p>
+</li>
+<li>
+<p><strong>--</strong>[<strong>no</strong>]<strong>color</strong></p>
+
+<p>Use ANSI color escape sequence for output.  Default is true.</p>
+</li>
+<li>
+<p><strong>--colormap</strong>=<em>colormap</em>, <strong>--cm</strong>=<em>colormap</em></p>
+
+<p>Basic <em>colormap</em> format is :</p>
+
+<pre><code>FIELD=COLOR
+</code></pre>
+
+<p>where the FIELD is one from these :</p>
+
+<pre><code>OLD       NEW       UNCHANGED
+--------- --------- ---------
+OCOMMAND  NCOMMAND           : Command line
+OFILE     NFILE              : File name
+OMARK     NMARK     UMARK    : Mark
+OLINE     NLINE     ULINE    : Line number
+OTEXT     NTEXT     UTEXT    : Text
+</code></pre>
+
+<p>You can make multiple filelds same color joining them by = :</p>
+
+<pre><code>FIELD1=FIELD2=...=COLOR
+</code></pre>
+
+<p>Also wildcard can be used for field name :</p>
+
+<pre><code>*CHANGE=BDw
+</code></pre>
+
+<p>Multiple fields can be specified by repeating options</p>
+
+<pre><code>--cm FILED1=COLOR1 --cm FIELD2=COLOR2 ...
+</code></pre>
+
+<p>or combined with comma (,) :</p>
+
+<pre><code>--cm FILED1=COLOR1,FIELD2=COLOR2, ...
+</code></pre>
+
+<p>COLOR is combination of single character representing uppercase
+foreground color :</p>
+
+<pre><code>R  Red
+G  Green
+B  Blue
+C  Cyan
+M  Magenta
+Y  Yellow
+K  Black
+W  White
+</code></pre>
+
+<p>and corresponding lowercase background color :</p>
+
+<pre><code>r, g, b, c, m, y, k, w
+</code></pre>
+
+<p>and other effects :</p>
+
+<pre><code>S  Standout (reverse video)
+U  Underline
+D  Double-struck (boldface)
+F  Flash (blink)
+E  Expand
+</code></pre>
+
+<p><strong>E</strong> is effective for command, file and text line.  That line will be
+expanded to window width filling up by space characters.  Left column
+is expanded always.  You may want to use this to set background color
+for right column.</p>
+
+<p>Defaults are :</p>
+
+<pre><code>OCOMMAND =&gt; "CSE"
+NCOMMAND =&gt; "MSE"
+OFILE    =&gt; "CDE"
+NFILE    =&gt; "MDE"
+OMARK    =&gt; "Cw"
+NMARK    =&gt; "Mw"
+UMARK    =&gt; "w"
+OLINE    =&gt; "Y"
+NLINE    =&gt; "Y"
+ULINE    =&gt; "Y"
+OTEXT    =&gt; "C"
+NTEXT    =&gt; "M"
+UTEXT    =&gt; ""
+</code></pre>
+
+<p>This is equivalent to :</p>
+
+<pre><code>sdif --cm 'OCOMMAND=CSE,NCOMMAND=MSE,OFILE=CDE,NFILE=MDE' \
+     --cm 'OMARK=Cw,NMARK=Mw,UMARK=w' \
+     --cm '*LINE=Y,OTEXT=C,NTEXT=M,UTEXT='
+</code></pre>
+
+<p>Try next setting if you want to make modified section more visible.</p>
+
+<pre><code>sdif -n --cdif --cm '[ON]TEXT=wE,UMARK=,OMARK=C,NMARK=M'
+</code></pre>
+</li>
+</ul><h1>
+<a name="author" class="anchor" href="#author"><span class="octicon octicon-link"></span></a>AUTHOR</h1>
+
+<p>Kazumasa Utashiro</p>
+
+<p><a href="https://github.com/kaz-utashiro/">https://github.com/kaz-utashiro/</a></p>
+
+<h1>
+<a name="see-also" class="anchor" href="#see-also"><span class="octicon octicon-link"></span></a>SEE ALSO</h1>
+
+<p><a href="http://man.he.net/man1/perl">perl(1)</a>,
+<a href="http://man.he.net/man1/diff">diff(1)</a>,
+<a href="http://man.he.net/man1/cdif">cdif(1)</a></p>
+
+<p><a href="https://github.com/kaz-utashiro/cdif">cdif</a>,
+<a href="https://github.com/kaz-utashiro/sdif">sdif</a></p>
+      </section>
+      <footer>
+        <p><small>Hosted on <a href="http://pages.github.com">GitHub Pages</a> using the Dinky theme</small></p>
+      </footer>
+    </div>
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+		
+  </body>
+</html>
