@@ -9,7 +9,6 @@
 <p><span itemscope itemtype="http://schema.org/Photograph">
 <a href="http://cdn-ak.f.st-hatena.com/images/fotolife/u/uta46/20140124/20140124233940.png">
 <img
-width="640"
 src="http://cdn-ak.f.st-hatena.com/images/fotolife/u/uta46/20140124/20140124233940.png"
 alt="f:id:uta46:20140124233940p:plain"
 title="f:id:uta46:20140124233940p:plain"
@@ -23,7 +22,6 @@ itemprop="image">
 <p><span itemscope itemtype="http://schema.org/Photograph">
 <a href="http://cdn-ak.f.st-hatena.com/images/fotolife/u/uta46/20140124/20140124234055.png">
 <img
-width="640"
 src="http://cdn-ak.f.st-hatena.com/images/fotolife/u/uta46/20140124/20140124234055.png"
 alt="f:id:uta46:20140124234055p:plain"
 title="f:id:uta46:20140124234055p:plain"
@@ -37,7 +35,6 @@ itemprop="image">
 <p><span itemscope itemtype="http://schema.org/Photograph">
 <a href="http://cdn-ak.f.st-hatena.com/images/fotolife/u/uta46/20140124/20140124234120.png">
 <img
-width="640"
 src="http://cdn-ak.f.st-hatena.com/images/fotolife/u/uta46/20140124/20140124234120.png"
 alt="f:id:uta46:20140124234120p:plain"
 title="f:id:uta46:20140124234120p:plain"
@@ -57,10 +54,10 @@ sdif file\_1 file\_2
 diff ... | sdif
 
     --number, -n        print line number
-    --digit=n           set the line number digits (default 4)
+    --digit=#           set the line number digits (default 4)
     --truncate, -t      truncate long line
     --onword            fold line on word boundaries
-    --width, -w #       specify width of output (default is 80)
+    --width=#, -W#      specify width of output (default is 80)
     --diff=s            set diff command
     --diffopts=s        set diff command options
     --[no]color         use color or not
@@ -71,7 +68,7 @@ diff ... | sdif
     -u, -U#             unified diff
 
     --cdif              use ``cdif'' as word context diff backend
-    --cdifopts          set cdif command options
+    --cdifopts=s        set cdif command options
     --mecab             pass --mecab option to cdif
 
 # DESCRIPTION
@@ -107,7 +104,7 @@ Environment valuable __SDIFOPTS__ is used to set default options.
 
 # OPTIONS
 
-- __--w__=_width_, __-w__
+- __--width__=_width_, __-W__
 
     Use width as a width of output listing.  Default width is 80.  If the
     standard error is assinged to a terminal, the width is taken from it
@@ -256,15 +253,13 @@ Environment valuable __SDIFOPTS__ is used to set default options.
 
 # AUTHOR
 
-Kazumasa Utashiro
-
-https://github.com/kaz-utashiro/
+- Kazumasa Utashiro
+- [https://github.com/kaz-utashiro/](https://github.com/kaz-utashiro/)
 
 # SEE ALSO
 
-[perl(1)](http://man.he.net/man1/perl),
-[diff(1)](http://man.he.net/man1/diff),
-[cdif(1)](http://man.he.net/man1/cdif)
-
-[cdif](https://github.com/kaz-utashiro/cdif),
-[sdif](https://github.com/kaz-utashiro/sdif)
+- sdif
+    - [repository](https://github.com/kaz-utashiro/sdif)
+    - [site](http://kaz-utashiro.github.io/sdif/)
+- cdif
+    - [repository](https://github.com/kaz-utashiro/cdif)
