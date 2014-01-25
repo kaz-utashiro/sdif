@@ -1,4 +1,10 @@
-# Side-by-side diff / ANSI color / word context
+# SDIF
+
+### is Side-by-side diff viewer
+
+### for ANSI color terminal
+
+### capable of word contex display with CDIF
 
 <p><span itemscope itemtype="http://schema.org/Photograph">
 <a href="http://cdn-ak.f.st-hatena.com/images/fotolife/u/uta46/20140124/20140124233940.png">
@@ -12,7 +18,7 @@ itemprop="image">
 </a>
 </span></p>
 
-# Unicode / Japanese
+## Unicode and Japanese support
 
 <p><span itemscope itemtype="http://schema.org/Photograph">
 <a href="http://cdn-ak.f.st-hatena.com/images/fotolife/u/uta46/20140124/20140124234055.png">
@@ -26,7 +32,7 @@ itemprop="image">
 </a>
 </span></p>
 
-# With --mecab morphology
+## with --mecab morphology
 
 <p><span itemscope itemtype="http://schema.org/Photograph">
 <a href="http://cdn-ak.f.st-hatena.com/images/fotolife/u/uta46/20140124/20140124234120.png">
