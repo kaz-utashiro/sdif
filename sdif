@@ -46,15 +46,18 @@ diff ... | sdif
     --digit=#		set the line number digits (default 4)
     --truncate, -t	truncate long line
     --onword		fold line on word boundaries
+    --context, -c, -C#	context diff
+    --unified, -u, -U#	unified diff
+
     --width=#, -W#	specify width of output (default is 80)
-    --diff=s		set diff command
-    --diffopts=s	set diff command options
     --[no]color		use color or not
     --colormap, --cm	specify color map
     --mark=position	mark position (right, left, center, side) or no
+    --view, -v		viewer mode
+
     --man		display manual page
-    -c, -C#		context diff
-    -u, -U#		unified diff
+    --diff=s		set diff command
+    --diffopts=s	set diff command options
 
     --cdif		use ``cdif'' as word context diff backend
     --cdifopts=s	set cdif command options
@@ -80,6 +83,7 @@ my @opt_colormap;
 my @opt_diffopts;
 my $opt_diff = 'diff';
 my $opt_digit = 4;
+my $opt_view;
 my $screen_width;
 my $column_width;
 
@@ -107,6 +111,7 @@ my @optargs = (
     "l" => \$opt_l,
     "s" => \$opt_s,
     "width|W=i" => \$opt_W,
+    "view|v" => \$opt_view,
 
     "d+" => \$opt_d,
     "h|help" => sub { usage() },
@@ -157,7 +162,7 @@ if ($opt_color) {
 	    map { $colormap{$_} = $c }
 	    map { match_glob $_, keys %colormap }
 	    @$_;	
-	}	
+	}
 	map { [ split /=/, $_, -1 ] }
 	map { split /,/ }
 	@opt_colormap;
@@ -219,6 +224,9 @@ my $num_format = "%${opt_digit}d";
 $screen_width = $opt_W || &terminal_width;
 $column_width = max(1, int(($screen_width - ($opt_mark ne NO ? 2 : 0)) / 2));
 
+my $oline = 1;
+my $nline = 1;
+
 if ($opt_d) {
     printf STDERR "\$OLD = %s\n", $OLD // "undef";
     printf STDERR "\$NEW = %s\n", $NEW // "undef";
@@ -228,6 +236,12 @@ if ($opt_d) {
 if ($readfile) {
     open(OLD, $OLD) || die "$OLD: $!\n";
     open(NEW, $NEW) || die "$NEW: $!\n";
+}
+
+if ($opt_view) {
+    $OLD && $NEW or die "Two files are required for viewer mode.\n";
+    print_identical(-1);
+    exit;
 }
 
 if ($opt_cdif) {
@@ -252,9 +266,6 @@ if ($opt_cdif) {
 } else {
     open(DIFF, $DIFF) || die "cannot open diff: $!\n";
 }
-
-my $oline = 1;
-my $nline = 1;
 
 use constant {
     DIFF_UNDEF => 0,
@@ -802,6 +813,7 @@ because text color can be handled by B<sdif>.
 
 Environment valuable B<SDIFOPTS> is used to set default options.
 
+
 =head1 OPTIONS
 
 =over 7
@@ -865,6 +877,10 @@ I<center>, I<side> or I<no>.  Default is I<center>.
 =item B<-->[B<no>]B<color>
 
 Use ANSI color escape sequence for output.  Default is true.
+
+=item B<--view>, B<-v>
+
+Viewer mode.  Display two files side-by-side without diff operation.
 
 =item B<--colormap>=I<colormap>, B<--cm>=I<colormap>
 
