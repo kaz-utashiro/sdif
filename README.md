@@ -1,3 +1,45 @@
+# Side-by-side diff / ANSI color / word context
+
+<p><span itemscope itemtype="http://schema.org/Photograph">
+<a href="http://cdn-ak.f.st-hatena.com/images/fotolife/u/uta46/20140124/20140124233940.png">
+<img
+width="640"
+src="http://cdn-ak.f.st-hatena.com/images/fotolife/u/uta46/20140124/20140124233940.png"
+alt="f:id:uta46:20140124233940p:plain"
+title="f:id:uta46:20140124233940p:plain"
+class="hatena-fotolife"
+itemprop="image">
+</a>
+</span></p>
+
+# Unicode / Japanese
+
+<p><span itemscope itemtype="http://schema.org/Photograph">
+<a href="http://cdn-ak.f.st-hatena.com/images/fotolife/u/uta46/20140124/20140124234055.png">
+<img
+width="640"
+src="http://cdn-ak.f.st-hatena.com/images/fotolife/u/uta46/20140124/20140124234055.png"
+alt="f:id:uta46:20140124234055p:plain"
+title="f:id:uta46:20140124234055p:plain"
+class="hatena-fotolife"
+itemprop="image">
+</a>
+</span></p>
+
+# With --mecab morphology
+
+<p><span itemscope itemtype="http://schema.org/Photograph">
+<a href="http://cdn-ak.f.st-hatena.com/images/fotolife/u/uta46/20140124/20140124234120.png">
+<img
+width="640"
+src="http://cdn-ak.f.st-hatena.com/images/fotolife/u/uta46/20140124/20140124234120.png"
+alt="f:id:uta46:20140124234120p:plain"
+title="f:id:uta46:20140124234120p:plain"
+class="hatena-fotolife"
+itemprop="image">
+</a>
+</span></p>
+
 # NAME
 
 sdif - side-by-side diff viewer for ANSI terminal
