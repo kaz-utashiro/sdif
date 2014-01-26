@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use utf8;
 use Carp;
-use List::Util qw(min max);
+use List::Util qw(min max reduce);
 use Getopt::Long;
 use Pod::Usage;
 use Text::ParseWords qw(shellwords);
@@ -238,13 +238,10 @@ if ($readfile) {
     open(NEW, $NEW) || die "$NEW: $!\n";
 }
 
-if ($opt_view) {
-    $OLD && $NEW or die "Two files are required for viewer mode.\n";
-    print_identical(-1);
-    exit;
+if ($opt_view and $OLD and $NEW) {
+    ;
 }
-
-if ($opt_cdif) {
+elsif ($opt_cdif) {
     my $pid = open DIFF, '-|';
     if (not defined $pid) {
 	die "$!" if not defined $pid;
@@ -445,6 +442,17 @@ sub merge_diffc {
 sub flush_buffer {
 
     push @_, [] while @_ % 3;
+
+    if ($opt_view) {
+	@_ = map { @$_ }
+	reduce {
+	    [ [] ,
+	      [ map { @$_ } $a->[1], $b->[0], $b->[1] ] ,
+	      [ map { @$_ } $a->[2], $b->[0], $b->[2] ] ] }
+	map { $_ ? [ ( splice @_, 0, 3 ) ] : [ [], [], [] ] }
+	0 .. @_ / 3 ;
+    }
+
     while (my($s, $o, $n) = splice(@_, 0, 3)) {
 
 	for (@$s) {
@@ -880,7 +888,7 @@ Use ANSI color escape sequence for output.  Default is true.
 
 =item B<--view>, B<-v>
 
-Viewer mode.  Display two files side-by-side without diff operation.
+Viewer mode.  Display two files side-by-side in straightforward order.
 
 =item B<--colormap>=I<colormap>, B<--cm>=I<colormap>
 
