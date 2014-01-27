@@ -57,15 +57,19 @@ diff ... | sdif
     --digit=#           set the line number digits (default 4)
     --truncate, -t      truncate long line
     --onword            fold line on word boundaries
-    --width=#, -W#      specify width of output (default is 80)
+    --context, -c, -C#  context diff
+    --unified, -u, -U#  unified diff
+
+    --width=#, -W#      specify width of output (default 80)
+    --[no]color         use color or not (default on)
+    --colormap, --cm    specify color map
+    --[no]256           on/off ANSI 256 color mode (default on)
+    --mark=position     mark position (right, left, center, side) or no
+    --view, -v          viewer mode
+
+    --man               display manual page
     --diff=s            set diff command
     --diffopts=s        set diff command options
-    --[no]color         use color or not
-    --colormap, --cm    specify color map
-    --mark=position     mark position (right, left, center, side) or no
-    --man               display manual page
-    -c, -C#             context diff
-    -u, -U#             unified diff
 
     --cdif              use ``cdif'' as word context diff backend
     --cdifopts=s        set cdif command options
@@ -104,7 +108,7 @@ Environment valuable __SDIFOPTS__ is used to set default options.
 
 # OPTIONS
 
-- __--width__=_width_, __-W__
+- __--width__=_width_, __-W__ _width_
 
     Use width as a width of output listing.  Default width is 80.  If the
     standard error is assinged to a terminal, the width is taken from it
@@ -164,6 +168,14 @@ Environment valuable __SDIFOPTS__ is used to set default options.
 
     Use ANSI color escape sequence for output.  Default is true.
 
+- __--__\[__no__\]__256__
+
+    Use ANSI 256 color mode.  Default is true.
+
+- __--view__, __-v__
+
+    Viewer mode.  Display two files side-by-side in straightforward order.
+
 - __--colormap__=_colormap_, __--cm__=_colormap_
 
     Basic _colormap_ format is :
@@ -212,6 +224,21 @@ Environment valuable __SDIFOPTS__ is used to set default options.
 
         r, g, b, c, m, y, k, w
 
+    or RGB value if using ANSI 256 color terminal :
+
+        FORMAT:
+            foreground[/background]
+
+        COLOR:
+            000 .. 555       : 6 x 6 x 6 216 colors
+            000000 .. FFFFFF : 24bit RGB mapped to 216 colors
+
+        Sample:
+            005     0000FF        : blue foreground
+               /505       /FF00FF : magenta background
+            000/555 000000/FFFFFF : black on white
+            500/050 FF0000/00FF00 : red on green
+
     and other effects :
 
         S  Standout (reverse video)
@@ -237,19 +264,15 @@ Environment valuable __SDIFOPTS__ is used to set default options.
         OLINE    => "Y"
         NLINE    => "Y"
         ULINE    => "Y"
-        OTEXT    => "C"
-        NTEXT    => "M"
+        OTEXT    => "E/455"
+        NTEXT    => "E/545"
         UTEXT    => ""
 
     This is equivalent to :
 
         sdif --cm 'OCOMMAND=CSE,NCOMMAND=MSE,OFILE=CDE,NFILE=MDE' \
              --cm 'OMARK=Cw,NMARK=Mw,UMARK=w' \
-             --cm '*LINE=Y,OTEXT=C,NTEXT=M,UTEXT='
-
-    Try next setting if you want to make modified section more visible.
-
-        sdif -n --cdif --cm '[ON]TEXT=wE,UMARK=,OMARK=C,NMARK=M'
+             --cm '*LINE=Y,OTEXT=E/455,NTEXT=E/545,UTEXT='
 
 # AUTHOR
 
@@ -259,7 +282,7 @@ Environment valuable __SDIFOPTS__ is used to set default options.
 # SEE ALSO
 
 - sdif
-    - [repository](https://github.com/kaz-utashiro/sdif)
-    - [site](http://kaz-utashiro.github.io/sdif/)
+    - [https://github.com/kaz-utashiro/sdif](https://github.com/kaz-utashiro/sdif)
+    - [http://kaz-utashiro.github.io/sdif/](http://kaz-utashiro.github.io/sdif/)
 - cdif
-    - [repository](https://github.com/kaz-utashiro/cdif)
+    - [https://github.com/kaz-utashiro/cdif](https://github.com/kaz-utashiro/cdif)

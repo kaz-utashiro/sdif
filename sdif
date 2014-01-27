@@ -20,7 +20,7 @@ $Data::Dumper::Terse = 1;
 ## Copyright (c) 1992-2014 Kazumasa Utashiro
 ##
 ## Original version on Jul 24 1991
-;; my $rcsid = q$Id: sdif,v 2.4 2014/01/24 23:46:31 utashiro Exp $;
+;; my $rcsid = q$Id: sdif,v 2.5 2014/01/27 03:50:49 utashiro Exp $;
 ##
 ## Use and redistribution for ANY PURPOSE are granted as long as all
 ## copyright notices are retained.  Redistribution with modification
@@ -273,7 +273,6 @@ use constant {
     DIFF_C => 2,
     DIFF_U => 3,
 };
-my $diff_mode = DIFF_UNDEF;
 
 while (<DIFF>) {
     my @old;
@@ -283,7 +282,6 @@ while (<DIFF>) {
     # normal diff
     #
     if (($left, $ctrl, $right) = /^([\d,]+)([adc])([\d,]+)$/) {
-	$diff_mode = DIFF_N;
 	my($l1, $l2) = range($left);
 	my($r1, $r2) = range($right);
 	if ($readfile) {
@@ -313,12 +311,10 @@ while (<DIFF>) {
     # context diff
     #
     elsif (/^\*\*\* /) {
-	$diff_mode = DIFF_C;
 	my $next = <DIFF>;
 	print_command($column_width, $_, $next, type => 'FILE');
     }
     elsif ($_ eq "***************\n") {
-	$diff_mode = DIFF_C;
 	my $ohead = $_ = <DIFF>;
 	unless (($left) = /^\*\*\* ([\d,]+) \*\*\*\*$/) {
 	    print;
@@ -348,12 +344,10 @@ while (<DIFF>) {
     # unified diff
     #
     elsif (/^--- /) {
-	$diff_mode = DIFF_U;
 	my $next = <DIFF>;
 	print_command($column_width, $_, $next, type => 'FILE');
     }
     elsif (/^\@\@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? \@\@/) {
-	$diff_mode = DIFF_U;
 	($oline, $nline) = ($1, $3);
 	my($a, $b) = ($2//1, $4//1);
 	print_command($column_width, $_, $_, type => 'COMMAND');
@@ -1052,9 +1046,9 @@ This is equivalent to :
 
 =over
 
-=item L<repository|https://github.com/kaz-utashiro/sdif>
+=item L<https://github.com/kaz-utashiro/sdif>
 
-=item L<site|http://kaz-utashiro.github.io/sdif/>
+=item L<http://kaz-utashiro.github.io/sdif/>
 
 =back
 
@@ -1062,7 +1056,7 @@ This is equivalent to :
 
 =over
 
-=item L<repository|https://github.com/kaz-utashiro/cdif>
+=item L<https://github.com/kaz-utashiro/cdif>
 
 =back
 
