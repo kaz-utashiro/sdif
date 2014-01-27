@@ -239,12 +239,12 @@ if ($opt_d) {
 if ($readfile) {
     open(OLD, $OLD) || die "$OLD: $!\n";
     open(NEW, $NEW) || die "$NEW: $!\n";
+    if ($opt_view) {
+	$DIFF = "/dev/null";
+    }
 }
 
-if ($opt_view and $OLD and $NEW) {
-    ;
-}
-elsif ($opt_cdif) {
+if ($opt_cdif) {
     my $pid = open DIFF, '-|';
     if (not defined $pid) {
 	die "$!" if not defined $pid;
@@ -923,6 +923,10 @@ I<center>, I<side> or I<no>.  Default is I<center>.
 =item B<-->[B<no>]B<color>
 
 Use ANSI color escape sequence for output.  Default is true.
+
+=item B<-->[B<no>]B<256>
+
+Use ANSI 256 color mode.  Default is true.
 
 =item B<--view>, B<-v>
 
