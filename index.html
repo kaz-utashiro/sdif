@@ -79,15 +79,19 @@
 --digit=#           set the line number digits (default 4)
 --truncate, -t      truncate long line
 --onword            fold line on word boundaries
---width=#, -W#      specify width of output (default is 80)
+--context, -c, -C#  context diff
+--unified, -u, -U#  unified diff
+
+--width=#, -W#      specify width of output (default 80)
+--[no]color         use color or not (default on)
+--colormap, --cm    specify color map
+--[no]256           on/off ANSI 256 color mode (default on)
+--mark=position     mark position (right, left, center, side) or no
+--view, -v          viewer mode
+
+--man               display manual page
 --diff=s            set diff command
 --diffopts=s        set diff command options
---[no]color         use color or not
---colormap, --cm    specify color map
---mark=position     mark position (right, left, center, side) or no
---man               display manual page
--c, -C#             context diff
--u, -U#             unified diff
 
 --cdif              use ``cdif'' as word context diff backend
 --cdifopts=s        set cdif command options
@@ -132,7 +136,7 @@ because text color can be handled by <strong>sdif</strong>.</p>
 
 <ul>
 <li>
-<p><strong>--width</strong>=<em>width</em>, <strong>-W</strong></p>
+<p><strong>--width</strong>=<em>width</em>, <strong>-W</strong> <em>width</em></p>
 
 <p>Use width as a width of output listing.  Default width is 80.  If the
 standard error is assinged to a terminal, the width is taken from it
@@ -205,6 +209,16 @@ output to <strong>sdif</strong> is easier unless you want to get whole text.</p>
 <p>Use ANSI color escape sequence for output.  Default is true.</p>
 </li>
 <li>
+<p><strong>--</strong>[<strong>no</strong>]<strong>256</strong></p>
+
+<p>Use ANSI 256 color mode.  Default is true.</p>
+</li>
+<li>
+<p><strong>--view</strong>, <strong>-v</strong></p>
+
+<p>Viewer mode.  Display two files side-by-side in straightforward order.</p>
+</li>
+<li>
 <p><strong>--colormap</strong>=<em>colormap</em>, <strong>--cm</strong>=<em>colormap</em></p>
 
 <p>Basic <em>colormap</em> format is :</p>
@@ -261,6 +275,22 @@ W  White
 <pre><code>r, g, b, c, m, y, k, w
 </code></pre>
 
+<p>or RGB value if using ANSI 256 color terminal :</p>
+
+<pre><code>FORMAT:
+    foreground[/background]
+
+COLOR:
+    000 .. 555       : 6 x 6 x 6 216 colors
+    000000 .. FFFFFF : 24bit RGB mapped to 216 colors
+
+Sample:
+    005     0000FF        : blue foreground
+       /505       /FF00FF : magenta background
+    000/555 000000/FFFFFF : black on white
+    500/050 FF0000/00FF00 : red on green
+</code></pre>
+
 <p>and other effects :</p>
 
 <pre><code>S  Standout (reverse video)
@@ -287,8 +317,8 @@ UMARK    =&gt; "w"
 OLINE    =&gt; "Y"
 NLINE    =&gt; "Y"
 ULINE    =&gt; "Y"
-OTEXT    =&gt; "C"
-NTEXT    =&gt; "M"
+OTEXT    =&gt; "E/455"
+NTEXT    =&gt; "E/545"
 UTEXT    =&gt; ""
 </code></pre>
 
@@ -296,12 +326,7 @@ UTEXT    =&gt; ""
 
 <pre><code>sdif --cm 'OCOMMAND=CSE,NCOMMAND=MSE,OFILE=CDE,NFILE=MDE' \
      --cm 'OMARK=Cw,NMARK=Mw,UMARK=w' \
-     --cm '*LINE=Y,OTEXT=C,NTEXT=M,UTEXT='
-</code></pre>
-
-<p>Try next setting if you want to make modified section more visible.</p>
-
-<pre><code>sdif -n --cdif --cm '[ON]TEXT=wE,UMARK=,OMARK=C,NMARK=M'
+     --cm '*LINE=Y,OTEXT=E/455,NTEXT=E/545,UTEXT='
 </code></pre>
 </li>
 </ul><h1>
@@ -317,14 +342,14 @@ UTEXT    =&gt; ""
 <li>sdif
 
 <ul>
-<li><a href="https://github.com/kaz-utashiro/sdif">repository</a></li>
-<li><a href="http://kaz-utashiro.github.io/sdif/">site</a></li>
+<li><a href="https://github.com/kaz-utashiro/sdif">https://github.com/kaz-utashiro/sdif</a></li>
+<li><a href="http://kaz-utashiro.github.io/sdif/">http://kaz-utashiro.github.io/sdif/</a></li>
 </ul>
 </li>
 <li>cdif
 
 <ul>
-<li><a href="https://github.com/kaz-utashiro/cdif">repository</a></li>
+<li><a href="https://github.com/kaz-utashiro/cdif">https://github.com/kaz-utashiro/cdif</a></li>
 </ul>
 </li>
 </ul>
