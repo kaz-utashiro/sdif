@@ -49,9 +49,10 @@ diff ... | sdif
     --context, -c, -C#	context diff
     --unified, -u, -U#	unified diff
 
-    --width=#, -W#	specify width of output (default is 80)
-    --[no]color		use color or not
+    --width=#, -W#	specify width of output (default 80)
+    --[no]color		use color or not (default on)
     --colormap, --cm	specify color map
+    --[no]256		on/off ANSI 256 color mode (default on)
     --mark=position	mark position (right, left, center, side) or no
     --view, -v		viewer mode
 
@@ -88,6 +89,7 @@ my $screen_width;
 my $column_width;
 
 my $opt_color = 1;
+my $opt_256 = 1;
 my $opt_mark = "center";
 my $opt_W;
 
@@ -122,6 +124,7 @@ my @optargs = (
     "diffopts=s" => \@opt_diffopts,
     "color!" => \$opt_color,
     "colormap|cm=s" => \@opt_colormap,
+    "256!" => \$opt_256,
     "c|context" => \$opt_c,
     "u|unified" => \$opt_u,
     "C=i" => \$opt_C,
@@ -149,8 +152,8 @@ my %colormap = (
     OLINE => "Y",
     NLINE => "Y",
     ULINE => "Y",
-    OTEXT => "C",
-    NTEXT => "M",
+    OTEXT => $opt_256 ? "E/455" : "C",
+    NTEXT => $opt_256 ? "E/545" : "M",
     UTEXT => "",
     );
 
@@ -599,6 +602,7 @@ my $wchars;
 my $_a_zA_Z0_9;
 my $reset_re;
 my $color_re;
+my $control_re;
 BEGIN {
     my $wide      = '\p{East_Asian_Width=Wide}';
     my $fullwidth = '\p{East_Asian_Width=FullWidth}';
@@ -606,7 +610,8 @@ BEGIN {
     $wchars = "${wide}${fullwidth}";
     $_a_zA_Z0_9 = "_a-zA-Z0-9";
     $reset_re = qr/\e\[[0;]*m/;
-    $color_re = qr/\e\[[\d;]*m/;
+    $color_re = qr{ \e \[ [\d;]* m }x;
+    $control_re = qr{ \e \] [\;\:\/0-9a-z]* \e \\ }x;
 }
 
 sub fold {
@@ -621,6 +626,10 @@ sub fold {
     my @color_stack;
     while (length) {
 
+	if (s/^($control_re)//) {
+	    $folded .= $1;
+	    next;
+	}
 	if (s/^($reset_re)//) {
 	    $folded .= $1;
 	    @color_stack = ();
@@ -743,6 +752,8 @@ sub unesc {
     $_;
 }
 
+use constant { FG => 'fg', BG => 'bg' } ;
+
 sub colorseq {
     my $colormode = shift;
 
@@ -751,6 +762,12 @@ sub colorseq {
 	($start, $end) = split(/,/, $colormode, 2);
     } else {
 	map {
+	    if (s/\/((?:[\da-f]{6})|[0-5][0-5][0-5])//i and $opt_256) {
+		$start .= ansi256($1, BG);
+	    }
+	    if (s/((?:[\da-f]{6})|[0-5][0-5][0-5])//i and $opt_256) {
+		$start .= ansi256($1, FG);
+	    }
 	    $start .= UNDERLINE if /U/;
 	    $start .= REVERSE   if /S/;
 	    $start .= BOLD      if /D/;
@@ -768,6 +785,27 @@ sub colorseq {
 	$start =~ s/m\e\[/;/g;
     }
     ($start, $end);
+}
+
+sub ansi256 {
+    my($code, $fg_or_bg) = @_;
+    my($r, $g, $b);
+    if ($code =~ /^([0-5])([0-5])([0-5])$/) {
+	($r, $g, $b) = ($1, $2, $3);
+    }
+    elsif ($code =~ /^([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i) {
+	$r = int(5 * hex($1) / 255);
+	$g = int(5 * hex($2) / 255);
+	$b = int(5 * hex($3) / 255);
+    }
+    else {
+	croak "Color format error.\n";
+    }
+    sprintf("\e[%d;%d;%dm",
+	    $fg_or_bg eq BG ? 48 : 38,
+	    5,
+	    16 + ($r * 36) + ($g * 6) + $b
+	);
 }
 
 my %colorcache;
@@ -938,6 +976,21 @@ and corresponding lowercase background color :
 
     r, g, b, c, m, y, k, w
 
+or RGB value if using ANSI 256 color terminal :
+
+    FORMAT:
+        foreground[/background]
+
+    COLOR:
+        000 .. 555       : 6 x 6 x 6 216 colors
+        000000 .. FFFFFF : 24bit RGB mapped to 216 colors
+
+    Sample:
+        005     0000FF        : blue foreground
+           /505       /FF00FF : magenta background
+        000/555 000000/FFFFFF : black on white
+        500/050 FF0000/00FF00 : red on green
+
 and other effects :
 
     S  Standout (reverse video)
@@ -963,19 +1016,15 @@ Defaults are :
     OLINE    => "Y"
     NLINE    => "Y"
     ULINE    => "Y"
-    OTEXT    => "C"
-    NTEXT    => "M"
+    OTEXT    => "E/455"
+    NTEXT    => "E/545"
     UTEXT    => ""
 
 This is equivalent to :
 
     sdif --cm 'OCOMMAND=CSE,NCOMMAND=MSE,OFILE=CDE,NFILE=MDE' \
          --cm 'OMARK=Cw,NMARK=Mw,UMARK=w' \
-         --cm '*LINE=Y,OTEXT=C,NTEXT=M,UTEXT='
-
-Try next setting if you want to make modified section more visible.
-
-    sdif -n --cdif --cm '[ON]TEXT=wE,UMARK=,OMARK=C,NMARK=M'
+         --cm '*LINE=Y,OTEXT=E/455,NTEXT=E/545,UTEXT='
 
 =back
 
