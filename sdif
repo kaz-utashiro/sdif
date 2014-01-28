@@ -79,7 +79,7 @@ my $opt_truncate;
 my $opt_onword;
 my $opt_cdif;
 my @opt_cdifopts = qw(--nocc --nomc --notc);
-my $opt_env;
+my $opt_env = 1;
 my @opt_colormap;
 my @opt_diffopts;
 my $opt_diff = 'diff';
@@ -99,9 +99,8 @@ my $opt_W;
 if (grep { $_ eq '--noenv' } @ARGV) {
     $opt_env = 0;
 }
-if ($ENV{'SDIFOPTS'}) {
-    require('shellwords.pl');
-    unshift(@ARGV, &shellwords($ENV{'SDIFOPTS'}));
+if ($opt_env and my $env = $ENV{'SDIFOPTS'}) {
+    unshift(@ARGV, shellwords($env));
 }
 
 my @optargs = (
@@ -438,6 +437,8 @@ sub merge_diffc {
 
 sub flush_buffer {
 
+    my($omark, $nmark) = qw(< >);
+
     push @_, [] while @_ % 3;
 
     if ($opt_view) {
@@ -448,6 +449,7 @@ sub flush_buffer {
 	      [ map { @$_ } $a->[2], $b->[0], $b->[2] ] ] }
 	map { $_ ? [ ( splice @_, 0, 3 ) ] : [ [], [], [] ] }
 	0 .. @_ / 3 ;
+	($omark, $nmark) = (' ', ' ');
     }
 
     while (my($s, $o, $n) = splice(@_, 0, 3)) {
@@ -461,8 +463,8 @@ sub flush_buffer {
 	while (@$o or @$n) {
 	    my $old = shift @$o;
 	    my $new = shift @$n;
-	    my $omark = $old ? '<' : ' ';
-	    my $nmark = $new ? '>' : ' ';
+	    my $omark = $old ? $omark : ' ';
+	    my $nmark = $new ? $nmark : ' ';
 
 	    print_column($column_width, $old, $omark, $nmark, $new);
 
@@ -674,7 +676,7 @@ sub fold {
 
     if (@color_stack) {
 	$folded .= RESET;
-	$_ = join '', @color_stack, $_;
+	$_ = join '', @color_stack, $_ if $_ ne '';
     }
 
     $folded .= ' ' x $room if $opt{pad};
