@@ -176,6 +176,9 @@ if ($opt_color) {
     $colorize = sub { $_[1] } ;
 }
 
+$colormap{OULINE} ||= $colormap{ULINE} || $colormap{OLINE};
+$colormap{NULINE} ||= $colormap{NLINE} || $colormap{NLINE};
+
 push(@opt_diffopts, "-c") if $opt_c;
 push(@opt_diffopts, "-u") if $opt_u;
 push(@opt_diffopts, "-C$opt_C") if defined $opt_C;
@@ -521,9 +524,9 @@ sub print_column {
     }
 
     my($OTEXT, $OLINE, $OMARK) =
-	$omark =~ /\S/ ? qw(OTEXT OLINE OMARK) : qw(UTEXT ULINE UMARK);
+	$omark =~ /\S/ ? qw(OTEXT OLINE OMARK) : qw(UTEXT OULINE UMARK);
     my($NTEXT, $NLINE, $NMARK) =
-	$nmark =~ /\S/ ? qw(NTEXT NLINE NMARK) : qw(UTEXT ULINE UMARK);
+	$nmark =~ /\S/ ? qw(NTEXT NLINE NMARK) : qw(UTEXT NULINE UMARK);
 
     $omark =~ s/\S/>/ if $omarkpos eq LEFT;
     $omark =~ s/\S/</ if $omarkpos eq RIGHT;
@@ -967,6 +970,8 @@ where the FIELD is one from these :
     OMARK     NMARK     UMARK    : Mark
     OLINE     NLINE     ULINE    : Line number
     OTEXT     NTEXT     UTEXT    : Text
+
+If ULINE is empty, OLINE and NLINE is used instead.
 
 You can make multiple filelds same color joining them by = :
 
