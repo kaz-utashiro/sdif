@@ -92,6 +92,7 @@ my $opt_color = 1;
 my $opt_256 = 1;
 my $opt_mark = "center";
 my $opt_W;
+my $opt_colortable;
 
 ##
 ## Special treatment --noenv option.
@@ -130,6 +131,7 @@ my @optargs = (
     "U=i" => \$opt_U,
     "cdif" => \$opt_cdif,
     "cdifopts=s" => \@opt_cdifopts,
+    "colortable" => \$opt_colortable,
 
     "--mecab" => sub { push @opt_cdifopts, "--mecab" },
 );
@@ -228,6 +230,11 @@ $column_width = max(1, int(($screen_width - ($opt_mark ne NO ? 2 : 0)) / 2));
 
 my $oline = 1;
 my $nline = 1;
+
+if ($opt_colortable) {
+    color_table();
+    exit;
+}
 
 if ($opt_d) {
     printf STDERR "\$OLD = %s\n", $OLD // "undef";
@@ -818,6 +825,23 @@ sub color {
 	$text =~ s/(^|$reset_re)([^\e\r\n]+)/$1$s$2$e/mg;
     }
     $text;
+}
+
+sub color_table {
+    for my $c (0..5) {
+	for my $b (0..5) {
+	    my @format =
+		("%d$b$c", "$c%d$b", "$b$c%d", "$b%d$c", "$c$b%d", "%d$c$b")
+		[0 .. min(5, $screen_width / (4 * 6) - 1)];
+	    for my $format (@format) {
+		for my $a (0..5) {
+		    my $rgb = sprintf $format, $a;
+		    print color("$rgb/$rgb", " $rgb");
+		}
+	    }
+	    print "\n";
+	}
+    }
 }
 
 __END__
