@@ -6,42 +6,19 @@
 
 ### capable of word contex display with CDIF
 
-<p><span itemscope itemtype="http://schema.org/Photograph">
-<a href="http://cdn-ak.f.st-hatena.com/images/fotolife/u/uta46/20140124/20140124233940.png">
-<img
-src="http://cdn-ak.f.st-hatena.com/images/fotolife/u/uta46/20140124/20140124233940.png"
-alt="f:id:uta46:20140124233940p:plain"
-title="f:id:uta46:20140124233940p:plain"
-class="hatena-fotolife"
-itemprop="image">
-</a>
-</span></p>
+![default](http://kaz-utashiro.github.io/sdif/images/screen-shot-default.png)
+
+### with flexible color setting
+
+![green](http://kaz-utashiro.github.io/sdif/images/screen-shot-green.png)
 
 ## Unicode and Japanese support
 
-<p><span itemscope itemtype="http://schema.org/Photograph">
-<a href="http://cdn-ak.f.st-hatena.com/images/fotolife/u/uta46/20140124/20140124234055.png">
-<img
-src="http://cdn-ak.f.st-hatena.com/images/fotolife/u/uta46/20140124/20140124234055.png"
-alt="f:id:uta46:20140124234055p:plain"
-title="f:id:uta46:20140124234055p:plain"
-class="hatena-fotolife"
-itemprop="image">
-</a>
-</span></p>
+![japanese](http://kaz-utashiro.github.io/sdif/images/screen-shot-japanese.png)
 
 ## with --mecab morphology
 
-<p><span itemscope itemtype="http://schema.org/Photograph">
-<a href="http://cdn-ak.f.st-hatena.com/images/fotolife/u/uta46/20140124/20140124234120.png">
-<img
-src="http://cdn-ak.f.st-hatena.com/images/fotolife/u/uta46/20140124/20140124234120.png"
-alt="f:id:uta46:20140124234120p:plain"
-title="f:id:uta46:20140124234120p:plain"
-class="hatena-fotolife"
-itemprop="image">
-</a>
-</span></p>
+![mecab](http://kaz-utashiro.github.io/sdif/images/screen-shot-mecab.png)
 
 # NAME
 
@@ -191,6 +168,8 @@ Environment valuable __SDIFOPTS__ is used to set default options.
         OMARK     NMARK     UMARK    : Mark
         OLINE     NLINE     ULINE    : Line number
         OTEXT     NTEXT     UTEXT    : Text
+
+    If ULINE is empty, OLINE and NLINE is used instead.
 
     You can make multiple filelds same color joining them by = :
 
