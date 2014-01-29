@@ -4,21 +4,28 @@
 
 ### for ANSI color terminal
 
-### capable of word contex display with CDIF
+### capable of word context display powerd by CDIF
 
-[![default](http://kaz-utashiro.github.io/sdif/images/screen-shot-default.png)](http://kaz-utashiro.github.io/sdif/images/screen-shot-default.png)
+[![default](http://kaz-utashiro.github.io/sdif/images/screen-shot-default.jpg)](http://kaz-utashiro.github.io/sdif/images/screen-shot-default.jpg)
 
-### with flexible color setting
 
-[![green](http://kaz-utashiro.github.io/sdif/images/screen-shot-green.png)](http://kaz-utashiro.github.io/sdif/images/screen-shot-green.png)
+# Flexible color
 
-## Unicode and Japanese support
+[![green](http://kaz-utashiro.github.io/sdif/images/screen-shot-green.jpg)](http://kaz-utashiro.github.io/sdif/images/screen-shot-green.jpg)
 
-[![japanese](http://kaz-utashiro.github.io/sdif/images/screen-shot-japanese.png)](http://kaz-utashiro.github.io/sdif/images/screen-shot-japanese.png)
 
-## with --mecab morphology
+# International
 
-[![mecab](http://kaz-utashiro.github.io/sdif/images/screen-shot-mecab.png)](http://kaz-utashiro.github.io/sdif/images/screen-shot-mecab.png)
+### Unicode
+
+### East Asian wide width character
+
+[![japanese](http://kaz-utashiro.github.io/sdif/images/screen-shot-japanese.jpg)](http://kaz-utashiro.github.io/sdif/images/screen-shot-japanese.jpg)
+
+
+# --mecab morphology
+
+[![mecab](http://kaz-utashiro.github.io/sdif/images/screen-shot-mecab.jpg)](http://kaz-utashiro.github.io/sdif/images/screen-shot-mecab.jpg)
 
 # NAME
 
