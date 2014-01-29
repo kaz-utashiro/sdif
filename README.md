@@ -6,19 +6,19 @@
 
 ### capable of word contex display with CDIF
 
-![default](http://kaz-utashiro.github.io/sdif/images/screen-shot-default.png)
+[![default](http://kaz-utashiro.github.io/sdif/images/screen-shot-default.png)](http://kaz-utashiro.github.io/sdif/images/screen-shot-default.png)
 
 ### with flexible color setting
 
-![green](http://kaz-utashiro.github.io/sdif/images/screen-shot-green.png)
+[![green](http://kaz-utashiro.github.io/sdif/images/screen-shot-green.png)](http://kaz-utashiro.github.io/sdif/images/screen-shot-green.png)
 
 ## Unicode and Japanese support
 
-![japanese](http://kaz-utashiro.github.io/sdif/images/screen-shot-japanese.png)
+[![japanese](http://kaz-utashiro.github.io/sdif/images/screen-shot-japanese.png)](http://kaz-utashiro.github.io/sdif/images/screen-shot-japanese.png)
 
 ## with --mecab morphology
 
-![mecab](http://kaz-utashiro.github.io/sdif/images/screen-shot-mecab.png)
+[![mecab](http://kaz-utashiro.github.io/sdif/images/screen-shot-mecab.png)](http://kaz-utashiro.github.io/sdif/images/screen-shot-mecab.png)
 
 # NAME
 
