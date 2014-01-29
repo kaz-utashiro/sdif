@@ -11,6 +11,8 @@
 
 # Flexible color
 
+### ANSI 256 colors
+
 [![green](http://kaz-utashiro.github.io/sdif/images/screen-shot-green.jpg)](http://kaz-utashiro.github.io/sdif/images/screen-shot-green.jpg)
 
 
@@ -20,12 +22,18 @@
 
 ### East Asian wide width character
 
+### Japanese Kanji/Hiragana/Katakana separation
+
 [![japanese](http://kaz-utashiro.github.io/sdif/images/screen-shot-japanese.jpg)](http://kaz-utashiro.github.io/sdif/images/screen-shot-japanese.jpg)
 
 
-# --mecab morphology
+# Japanese syllable tokenizer
+
+### --mecab morphology
 
 [![mecab](http://kaz-utashiro.github.io/sdif/images/screen-shot-mecab.jpg)](http://kaz-utashiro.github.io/sdif/images/screen-shot-mecab.jpg)
+
+[![mecab](http://kaz-utashiro.github.io/sdif/images/screen-shot-mecab-comp.jpg)](http://kaz-utashiro.github.io/sdif/images/screen-shot-mecab-comp.jpg)
 
 # NAME
 
