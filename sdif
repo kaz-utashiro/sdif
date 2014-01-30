@@ -52,6 +52,7 @@ diff ... | sdif
     --width=#, -W#	specify width of output (default 80)
     --[no]color		use color or not (default on)
     --colormap, --cm	specify color map
+    --colortable	show color table
     --[no]256		on/off ANSI 256 color mode (default on)
     --mark=position	mark position (right, left, center, side) or no
     --view, -v		viewer mode
@@ -145,8 +146,8 @@ warn "\@ARGV = (@SAVEDARGV)\n" if $opt_d;
 my %colormap = (
     OCOMMAND => "CSE",
     NCOMMAND => "MSE",
-    OFILE => "CDE",
-    NFILE => "MDE",
+    OFILE => "CDSE",
+    NFILE => "MDSE",
     OMARK => "wC",
     NMARK => "wM",
     UMARK => "w",
@@ -768,10 +769,10 @@ sub colorseq {
 	($start, $end) = split(/,/, $colormode, 2);
     } else {
 	map {
-	    if (s/\/((?:[\da-f]{6})|[0-5][0-5][0-5])//i and $opt_256) {
+	    if (s/\/((?i:[\da-f]{6})|[0-5][0-5][0-5])// and $opt_256) {
 		$start .= ansi256($1, BG);
 	    }
-	    if (s/((?:[\da-f]{6})|[0-5][0-5][0-5])//i and $opt_256) {
+	    if (s/((?i:[\da-f]{6})|[0-5][0-5][0-5])// and $opt_256) {
 		$start .= ansi256($1, FG);
 	    }
 	    $start .= UNDERLINE if /U/;
@@ -950,6 +951,10 @@ Use ANSI color escape sequence for output.  Default is true.
 =item B<-->[B<no>]B<256>
 
 Use ANSI 256 color mode.  Default is true.
+
+=item B<--colortable>
+
+Show table of ANSI 216 colors.
 
 =item B<--view>, B<-v>
 
