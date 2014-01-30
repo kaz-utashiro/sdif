@@ -55,6 +55,7 @@ diff ... | sdif
     --width=#, -W#      specify width of output (default 80)
     --[no]color         use color or not (default on)
     --colormap, --cm    specify color map
+    --colortable        show color table
     --[no]256           on/off ANSI 256 color mode (default on)
     --mark=position     mark position (right, left, center, side) or no
     --view, -v          viewer mode
@@ -163,6 +164,10 @@ Environment valuable __SDIFOPTS__ is used to set default options.
 - __--__\[__no__\]__256__
 
     Use ANSI 256 color mode.  Default is true.
+
+- __--colortable__
+
+    Show table of ANSI 216 colors.
 
 - __--view__, __-v__
 
