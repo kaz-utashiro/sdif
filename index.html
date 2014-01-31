@@ -66,6 +66,16 @@
 
 <p><a href="http://kaz-utashiro.github.io/sdif/images/screen-shot-japanese.jpg"><img src="http://kaz-utashiro.github.io/sdif/images/screen-shot-japanese.jpg" alt="japanese"></a></p>
 
+<h3>
+<a name="korean" class="anchor" href="#korean"><span class="octicon octicon-link"></span></a>Korean</h3>
+
+<p><a href="http://kaz-utashiro.github.io/sdif/images/screen-shot-korean.jpg"><img src="http://kaz-utashiro.github.io/sdif/images/screen-shot-korean.jpg" alt="korean"></a></p>
+
+<h3>
+<a name="chinese" class="anchor" href="#chinese"><span class="octicon octicon-link"></span></a>Chinese</h3>
+
+<p><a href="http://kaz-utashiro.github.io/sdif/images/screen-shot-chinese.jpg"><img src="http://kaz-utashiro.github.io/sdif/images/screen-shot-chinese.jpg" alt="chinese"></a></p>
+
 <h1>
 <a name="japanese-syllable-tokenizer" class="anchor" href="#japanese-syllable-tokenizer"><span class="octicon octicon-link"></span></a>Japanese syllable tokenizer</h1>
 
@@ -98,6 +108,7 @@
 --width=#, -W#      specify width of output (default 80)
 --[no]color         use color or not (default on)
 --colormap, --cm    specify color map
+--colortable        show color table
 --[no]256           on/off ANSI 256 color mode (default on)
 --mark=position     mark position (right, left, center, side) or no
 --view, -v          viewer mode
@@ -227,6 +238,11 @@ output to <strong>sdif</strong> is easier unless you want to get whole text.</p>
 <p>Use ANSI 256 color mode.  Default is true.</p>
 </li>
 <li>
+<p><strong>--colortable</strong></p>
+
+<p>Show table of ANSI 216 colors.</p>
+</li>
+<li>
 <p><strong>--view</strong>, <strong>-v</strong></p>
 
 <p>Viewer mode.  Display two files side-by-side in straightforward order.</p>
@@ -324,8 +340,8 @@ for right column.</p>
 
 <pre><code>OCOMMAND =&gt; "CSE"
 NCOMMAND =&gt; "MSE"
-OFILE    =&gt; "CDE"
-NFILE    =&gt; "MDE"
+OFILE    =&gt; "CDSE"
+NFILE    =&gt; "MDSE"
 OMARK    =&gt; "Cw"
 NMARK    =&gt; "Mw"
 UMARK    =&gt; "w"
