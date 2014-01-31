@@ -606,7 +606,7 @@ sub print_fields {
 }
 
 my $wchars;
-my $_a_zA_Z0_9;
+my $alphanum;
 my $reset_re;
 my $color_re;
 my $control_re;
@@ -615,7 +615,7 @@ BEGIN {
     my $fullwidth = '\p{East_Asian_Width=FullWidth}';
     my $ambiguous = '\p{East_Asian_Width=Ambiguous}';
     $wchars = "${wide}${fullwidth}";
-    $_a_zA_Z0_9 = "_a-zA-Z0-9";
+    $alphanum = '_\d\p{Latin}';
     $reset_re = qr/\e\[[0;]*m/;
     $color_re = qr{ \e \[ [\d;]* m }x;
     $control_re = qr{ \e \] [\;\:\/0-9a-z]* \e \\ }x;
@@ -666,12 +666,12 @@ sub fold {
     }
 
     if ($opt{onword}
-	and my($tail) = /^([$_a_zA_Z0_9]+)/o
+	and my($tail) = /^([$alphanum]+)/o
 	and $folded =~ m{
 		^
 		( (?: [^\e]* $color_re ) *+ )
 		( .*? )
-		( [$_a_zA_Z0_9]+ )
+		( [$alphanum]+ )
 		$
 	}xo
 	) {
