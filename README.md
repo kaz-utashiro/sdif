@@ -26,6 +26,14 @@
 
 [![japanese](http://kaz-utashiro.github.io/sdif/images/screen-shot-japanese.jpg)](http://kaz-utashiro.github.io/sdif/images/screen-shot-japanese.jpg)
 
+### Korean
+
+[![korean](http://kaz-utashiro.github.io/sdif/images/screen-shot-korean.jpg)](http://kaz-utashiro.github.io/sdif/images/screen-shot-korean.jpg)
+
+### Chinese
+
+[![chinese](http://kaz-utashiro.github.io/sdif/images/screen-shot-chinese.jpg)](http://kaz-utashiro.github.io/sdif/images/screen-shot-chinese.jpg)
+
 
 # Japanese syllable tokenizer
 
@@ -255,8 +263,8 @@ Environment valuable __SDIFOPTS__ is used to set default options.
 
         OCOMMAND => "CSE"
         NCOMMAND => "MSE"
-        OFILE    => "CDE"
-        NFILE    => "MDE"
+        OFILE    => "CDSE"
+        NFILE    => "MDSE"
         OMARK    => "Cw"
         NMARK    => "Mw"
         UMARK    => "w"
