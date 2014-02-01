@@ -271,15 +271,15 @@ Environment valuable __SDIFOPTS__ is used to set default options.
         OLINE    => "Y"
         NLINE    => "Y"
         ULINE    => "Y"
-        OTEXT    => "E/455"
-        NTEXT    => "E/545"
+        OTEXT    => "E/554" or "C"
+        NTEXT    => "E/554" or "M"
         UTEXT    => ""
 
     This is equivalent to :
 
         sdif --cm 'OCOMMAND=CSE,NCOMMAND=MSE,OFILE=CDE,NFILE=MDE' \
              --cm 'OMARK=Cw,NMARK=Mw,UMARK=w' \
-             --cm '*LINE=Y,OTEXT=E/455,NTEXT=E/545,UTEXT='
+             --cm '*LINE=Y,[ON]TEXT=E/554,UTEXT='
 
 # AUTHOR
 
@@ -293,3 +293,4 @@ Environment valuable __SDIFOPTS__ is used to set default options.
     - [http://kaz-utashiro.github.io/sdif/](http://kaz-utashiro.github.io/sdif/)
 - cdif
     - [https://github.com/kaz-utashiro/cdif](https://github.com/kaz-utashiro/cdif)
+    - [http://kaz-utashiro.github.io/cdif/](http://kaz-utashiro.github.io/cdif/)

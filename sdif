@@ -20,7 +20,7 @@ $Data::Dumper::Terse = 1;
 ## Copyright (c) 1992-2014 Kazumasa Utashiro
 ##
 ## Original version on Jul 24 1991
-;; my $rcsid = q$Id: sdif,v 2.5 2014/01/27 03:50:49 utashiro Exp $;
+;; my $rcsid = q$Id: sdif,v 2.6 2014/02/01 03:19:28 utashiro Exp $;
 ##
 ## Use and redistribution for ANY PURPOSE are granted as long as all
 ## copyright notices are retained.  Redistribution with modification
@@ -154,8 +154,8 @@ my %colormap = (
     OLINE => "Y",
     NLINE => "Y",
     ULINE => "Y",
-    OTEXT => $opt_256 ? "E/455" : "C",
-    NTEXT => $opt_256 ? "E/545" : "M",
+    OTEXT => $opt_256 ? "E/554" : "G",
+    NTEXT => $opt_256 ? "E/554" : "G",
     UTEXT => "",
     );
 
@@ -1050,15 +1050,15 @@ Defaults are :
     OLINE    => "Y"
     NLINE    => "Y"
     ULINE    => "Y"
-    OTEXT    => "E/455"
-    NTEXT    => "E/545"
+    OTEXT    => "E/554" or "C"
+    NTEXT    => "E/554" or "M"
     UTEXT    => ""
 
 This is equivalent to :
 
     sdif --cm 'OCOMMAND=CSE,NCOMMAND=MSE,OFILE=CDE,NFILE=MDE' \
          --cm 'OMARK=Cw,NMARK=Mw,UMARK=w' \
-         --cm '*LINE=Y,OTEXT=E/455,NTEXT=E/545,UTEXT='
+         --cm '*LINE=Y,[ON]TEXT=E/554,UTEXT='
 
 =back
 
@@ -1093,6 +1093,8 @@ This is equivalent to :
 =over
 
 =item L<https://github.com/kaz-utashiro/cdif>
+
+=item L<http://kaz-utashiro.github.io/cdif/>
 
 =back
 
