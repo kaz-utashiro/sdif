@@ -655,11 +655,11 @@ sub fold {
 	if (my $mb = s/^([$wchars]+)//o or s/^(\e*[^\e$wchars]+)//o) {
 	    my $string = $1;
 	    my $chars = $mb ? max(1, int($room/2)) : $room;
-
-	    my $cut = substr($string, 0, $chars, "");
-	    $folded .= $cut;
-	    $room -= mbwidth($cut);
-	    $_ = $string . $_ if length $string;
+	    if ($string =~ s/^(\X{0,$chars})//) {
+		$folded .= $1;
+		$room -= mbwidth($1);
+	    }
+	    $_ = $string . $_ if $string ne '';
 	} else {
 	    die "panic ($_)";
 	}
@@ -735,6 +735,9 @@ sub pwidth {
 
 sub mbwidth {
     my $arg = shift;
+    $arg =~ s{
+	\p{Mn}	# non-spacing mark
+    }{}xg;
     my $len = length $arg;
     while ($arg =~ m/([$wchars]+)/go) {
 	$len += length $1;
