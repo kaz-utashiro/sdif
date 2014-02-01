@@ -348,8 +348,8 @@ UMARK    =&gt; "w"
 OLINE    =&gt; "Y"
 NLINE    =&gt; "Y"
 ULINE    =&gt; "Y"
-OTEXT    =&gt; "E/455"
-NTEXT    =&gt; "E/545"
+OTEXT    =&gt; "E/554" or "C"
+NTEXT    =&gt; "E/554" or "M"
 UTEXT    =&gt; ""
 </code></pre>
 
@@ -357,7 +357,7 @@ UTEXT    =&gt; ""
 
 <pre><code>sdif --cm 'OCOMMAND=CSE,NCOMMAND=MSE,OFILE=CDE,NFILE=MDE' \
      --cm 'OMARK=Cw,NMARK=Mw,UMARK=w' \
-     --cm '*LINE=Y,OTEXT=E/455,NTEXT=E/545,UTEXT='
+     --cm '*LINE=Y,[ON]TEXT=E/554,UTEXT='
 </code></pre>
 </li>
 </ul><h1>
@@ -381,6 +381,7 @@ UTEXT    =&gt; ""
 
 <ul>
 <li><a href="https://github.com/kaz-utashiro/cdif">https://github.com/kaz-utashiro/cdif</a></li>
+<li><a href="http://kaz-utashiro.github.io/cdif/">http://kaz-utashiro.github.io/cdif/</a></li>
 </ul>
 </li>
 </ul>
