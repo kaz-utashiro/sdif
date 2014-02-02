@@ -26,6 +26,14 @@
 
 [![japanese](http://kaz-utashiro.github.io/sdif/images/screen-shot-japanese.jpg)](http://kaz-utashiro.github.io/sdif/images/screen-shot-japanese.jpg)
 
+### Korean
+
+[![korean](http://kaz-utashiro.github.io/sdif/images/screen-shot-korean.jpg)](http://kaz-utashiro.github.io/sdif/images/screen-shot-korean.jpg)
+
+### Chinese
+
+[![chinese](http://kaz-utashiro.github.io/sdif/images/screen-shot-chinese.jpg)](http://kaz-utashiro.github.io/sdif/images/screen-shot-chinese.jpg)
+
 
 # Japanese syllable tokenizer
 
@@ -55,6 +63,7 @@ diff ... | sdif
     --width=#, -W#      specify width of output (default 80)
     --[no]color         use color or not (default on)
     --colormap, --cm    specify color map
+    --colortable        show color table
     --[no]256           on/off ANSI 256 color mode (default on)
     --mark=position     mark position (right, left, center, side) or no
     --view, -v          viewer mode
@@ -164,6 +173,10 @@ Environment valuable __SDIFOPTS__ is used to set default options.
 
     Use ANSI 256 color mode.  Default is true.
 
+- __--colortable__
+
+    Show table of ANSI 216 colors.
+
 - __--view__, __-v__
 
     Viewer mode.  Display two files side-by-side in straightforward order.
@@ -250,23 +263,23 @@ Environment valuable __SDIFOPTS__ is used to set default options.
 
         OCOMMAND => "CSE"
         NCOMMAND => "MSE"
-        OFILE    => "CDE"
-        NFILE    => "MDE"
+        OFILE    => "CDSE"
+        NFILE    => "MDSE"
         OMARK    => "Cw"
         NMARK    => "Mw"
         UMARK    => "w"
         OLINE    => "Y"
         NLINE    => "Y"
         ULINE    => "Y"
-        OTEXT    => "E/455"
-        NTEXT    => "E/545"
+        OTEXT    => "E/554" or "C"
+        NTEXT    => "E/554" or "M"
         UTEXT    => ""
 
     This is equivalent to :
 
         sdif --cm 'OCOMMAND=CSE,NCOMMAND=MSE,OFILE=CDE,NFILE=MDE' \
              --cm 'OMARK=Cw,NMARK=Mw,UMARK=w' \
-             --cm '*LINE=Y,OTEXT=E/455,NTEXT=E/545,UTEXT='
+             --cm '*LINE=Y,[ON]TEXT=E/554,UTEXT='
 
 # AUTHOR
 
@@ -280,3 +293,4 @@ Environment valuable __SDIFOPTS__ is used to set default options.
     - [http://kaz-utashiro.github.io/sdif/](http://kaz-utashiro.github.io/sdif/)
 - cdif
     - [https://github.com/kaz-utashiro/cdif](https://github.com/kaz-utashiro/cdif)
+    - [http://kaz-utashiro.github.io/cdif/](http://kaz-utashiro.github.io/cdif/)
