@@ -655,10 +655,16 @@ sub fold {
 	}
 
 	if (s/^(\e*[^\e]+)//o) {
-	    my($a, $b) = simple_fold($1, $room);
+	    my $s = $1;
+	    if ((my $w = mbwidth($s)) <= $room) {
+		$folded .= $s;
+		$room -= $w;
+		next;
+	    }
+	    my($a, $b) = simple_fold($s, $room);
 	    my $w = mbwidth($a);
 	    if ($w > $room and $folded ne '') {
-		$_ = $1 . $_;
+		$_ = $s . $_;
 		last;
 	    }
 	    ($folded, $_) = ($folded . $a, $b . $_);
