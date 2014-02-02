@@ -654,14 +654,15 @@ sub fold {
 	    next;
 	}
 
-	if (my $mb = s/^([$wchars]+)//o or s/^(\e*[^\e$wchars]+)//o) {
-	    my $string = $1;
-	    my $chars = $mb ? max(1, int($room/2)) : $room;
-	    if ($string =~ s/^(\X{0,$chars})//) {
-		$folded .= $1;
-		$room -= mbwidth($1);
+	if (s/^(\e*[^\e]+)//o) {
+	    my($a, $b) = simple_fold($1, $room);
+	    my $w = mbwidth($a);
+	    if ($w > $room and $folded ne '') {
+		$_ = $1 . $_;
+		last;
 	    }
-	    $_ = $string . $_ if $string ne '';
+	    ($folded, $_) = ($folded . $a, $b . $_);
+	    $room -= $w;
 	} else {
 	    die "panic ($_)";
 	}
@@ -694,6 +695,30 @@ sub fold {
 
     $folded .= ' ' x $room if $opt{pad};
 
+    ($folded, $_);
+}
+
+##
+## Trim off one or more characters from the top.
+##
+sub simple_fold {
+    local $_ = shift;
+    my $width = shift;
+    my $folded = '';
+    ##
+    ## This process seems to be inefficient, but \X matches visually
+    ## multiple characters in some language, such as Thai.
+    ## c.f. http://docstore.mik.ua/orelly/perl4/cook/ch01_09.htm
+    ##
+    while ($width > 0 and s/^(\X)//) {
+	my $w = mbwidth($1);
+	if ($width < $w and $folded ne '') {
+	    $_ = $1 . $_;
+	    last;
+	}
+	$folded .= $1;
+	$width -= $w;
+    }
     ($folded, $_);
 }
 
