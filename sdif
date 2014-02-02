@@ -654,7 +654,7 @@ sub fold {
 	    next;
 	}
 
-	if (s/^(\e*[^\e]+)//o) {
+	if (s/^(\e*[^\e]+)//) {
 	    my $s = $1;
 	    if ((my $w = mbwidth($s)) <= $room) {
 		$folded .= $s;
@@ -663,7 +663,7 @@ sub fold {
 	    }
 	    my($a, $b) = simple_fold($s, $room);
 	    my $w = mbwidth($a);
-	    if ($w > $room and $folded ne '') {
+	    if ($w > $room and $room < $width) {
 		$_ = $s . $_;
 		last;
 	    }
@@ -710,22 +710,21 @@ sub fold {
 sub simple_fold {
     local $_ = shift;
     my $width = shift;
-    my $folded = '';
+    $width <= 0 and croak "parameter error";
     ##
     ## This process seems to be inefficient, but \X matches visually
     ## multiple characters in some language, such as Thai.
     ## c.f. http://docstore.mik.ua/orelly/perl4/cook/ch01_09.htm
     ##
-    while ($width > 0 and s/^(\X)//) {
+    my $len = 0;
+    while (/\G(\X)/g) {
 	my $w = mbwidth($1);
-	if ($width < $w and $folded ne '') {
-	    $_ = $1 . $_;
-	    last;
-	}
-	$folded .= $1;
+	last if $width < $w and $len > 0;
+	$len += length($1);
 	$width -= $w;
+	last if $width <= 0;
     }
-    ($folded, $_);
+    (substr($_, 0, $len), substr($_, $len));
 }
 
 sub read_line {
