@@ -750,28 +750,30 @@ BEGIN {
 }
 sub expand_tab {
     local $_ = shift;
-    1 while s/^([^\t]*)\t/$1 . $tabspace[&pwidth($1) % 8]/e;
+    1 while s{^([^\t]*)\t(\t*)}{
+	$1 . $tabspace[pwidth($1) % 8] . $tabspace[0] x length($2)
+    }e;
     $_;
 }
 
 sub pwidth {
     local $_ = shift;
     if (/[\010\e\f\r]/) {
-	s/$color_re//g;
 	s/^.*[\f\r]//;
+	s/$color_re//g;
 	1 while s/[^\010]\010//;
 	s/^\010+//;
     }
-    /[$wchars]/o ? mbwidth($_) : length($_);
+    mbwidth($_);
 }
 
 sub mbwidth {
     my $arg = shift;
     my $len = 0;
     while ($arg =~ m{
-		( (?: (?![$wchars]) \P{Mn} ) + )
-		|
-		( (?: (?=[$wchars]) \P{Mn} ) + )
+	( (?: (?![$wchars]) \P{Mn} ) + )
+	|
+	( (?: (?=[$wchars]) \P{Mn} ) + )
     }xgo) {
 	$len += defined $1 ? length($1) : length($2) * 2;
     }
