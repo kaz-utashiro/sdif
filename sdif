@@ -182,10 +182,18 @@ $colormap{NUMARK} ||= $colormap{UMARK} || $colormap{NMARK};
 $colormap{OULINE} ||= $colormap{ULINE} || $colormap{OLINE};
 $colormap{NULINE} ||= $colormap{ULINE} || $colormap{NLINE};
 
+##
+## setup diffopts
+##
 push(@opt_diffopts, "-c") if $opt_c;
 push(@opt_diffopts, "-u") if $opt_u;
 push(@opt_diffopts, "-C$opt_C") if defined $opt_C;
 push(@opt_diffopts, "-U$opt_U") if defined $opt_U;
+
+##
+## setup cdifopts
+##
+push(@opt_cdifopts, '--no256') if not $opt_256;
 
 my($OLD, $NEW, $DIFF);
 if (@ARGV == 2) {
