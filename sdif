@@ -150,10 +150,10 @@ my %colormap = (
     NFILE => "MDSE",
     OMARK => "wC",
     NMARK => "wM",
-    UMARK => "w",
+    UMARK => "",
     OLINE => "Y",
     NLINE => "Y",
-    ULINE => "Y",
+    ULINE => "",
     OTEXT => $opt_256 ? "E/554" : "G",
     NTEXT => $opt_256 ? "E/554" : "G",
     UTEXT => "",
@@ -177,8 +177,10 @@ if ($opt_color) {
     $colorize = sub { $_[1] } ;
 }
 
+$colormap{OUMARK} ||= $colormap{UMARK} || $colormap{OMARK};
+$colormap{NUMARK} ||= $colormap{UMARK} || $colormap{NMARK};
 $colormap{OULINE} ||= $colormap{ULINE} || $colormap{OLINE};
-$colormap{NULINE} ||= $colormap{NLINE} || $colormap{NLINE};
+$colormap{NULINE} ||= $colormap{ULINE} || $colormap{NLINE};
 
 push(@opt_diffopts, "-c") if $opt_c;
 push(@opt_diffopts, "-u") if $opt_u;
@@ -525,9 +527,9 @@ sub print_column {
     }
 
     my($OTEXT, $OLINE, $OMARK) =
-	$omark =~ /\S/ ? qw(OTEXT OLINE OMARK) : qw(UTEXT OULINE UMARK);
+	$omark =~ /\S/ ? qw(OTEXT OLINE OMARK) : qw(UTEXT OULINE OUMARK);
     my($NTEXT, $NLINE, $NMARK) =
-	$nmark =~ /\S/ ? qw(NTEXT NLINE NMARK) : qw(UTEXT NULINE UMARK);
+	$nmark =~ /\S/ ? qw(NTEXT NLINE NMARK) : qw(UTEXT NULINE NUMARK);
 
     $omark =~ s/\S/>/ if $omarkpos eq LEFT;
     $omark =~ s/\S/</ if $omarkpos eq RIGHT;
@@ -979,7 +981,8 @@ where the FIELD is one from these :
     OLINE     NLINE     ULINE    : Line number
     OTEXT     NTEXT     UTEXT    : Text
 
-If ULINE is empty, OLINE and NLINE is used instead.
+If UMARK and/or ULINE is empty, OMARK/NMARK and/or OLINE/NLINE are
+used instead.
 
 You can make multiple filelds same color joining them by = :
 
