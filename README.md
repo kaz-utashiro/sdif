@@ -197,7 +197,8 @@ Environment valuable __SDIFOPTS__ is used to set default options.
         OLINE     NLINE     ULINE    : Line number
         OTEXT     NTEXT     UTEXT    : Text
 
-    If ULINE is empty, OLINE and NLINE is used instead.
+    If UMARK and/or ULINE is empty, OMARK/NMARK and/or OLINE/NLINE are
+    used instead.
 
     You can make multiple filelds same color joining them by = :
 
