@@ -412,8 +412,10 @@ sub read_diffu {
     my $i = 0;
     my @buf;
     my $slot;
-    while (2 * $l[0] + $l[1] + $l[2] > 0) {
-	$_ = <$FH>;
+    while (2 * $l[0] + $l[1] + $l[2] > 0 and $_ = <$FH>) {
+	# `git diff' produces message like this:
+	# "\ No newline at end of file"
+	/^[ \t\-\+]/ or next;
 	while (($i % 3) != ($slot = $slot{substr($_, 0, 1)})) {
 	    $i++;
 	}
