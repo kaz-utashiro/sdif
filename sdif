@@ -337,17 +337,25 @@ while (<DIFF>) {
 	    print;
 	    next;
 	}
+	my $oline = range($left);
+	my $dline = 0;
+	my $cline = 0;
 	my $nhead = $_ = <DIFF>;
 	unless (($right) = /^--- ([\d,]+) ----$/) {
-	    @old = read_line(*DIFF, range($left) - 1, $nhead);
+	    @old = read_line(*DIFF, $oline - 1, $nhead);
 	    $nhead = $_ = <DIFF>;
 	    unless (($right) = /^--- ([\d,]+) ----$/) {
 		print $ohead, @old, $_;
 		next;
 	    }
+	    for (@old) {
+		/^-/ and ++$dline;
+		/^!/ and ++$cline;
+	    }
 	}
-	if (@old == 0 or grep(/^\!/, @old)) {
-	    @new = read_line(*DIFF, scalar(range($right)));
+	my $nline = range($right);
+	if (@old == 0 or $cline != 0 or ($oline - $dline != $nline)) {
+	    @new = read_line(*DIFF, $nline);
 	}
 	print_command($column_width, $ohead, $nhead);
 	($oline) = $left =~ /^(\d+)/;
