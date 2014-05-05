@@ -141,20 +141,35 @@ GetOptions(@optargs) || usage();
 
 warn "\@ARGV = (@SAVEDARGV)\n" if $opt_d;
 
-my %colormap = (
-    OCOMMAND => "CSE",
-    NCOMMAND => "MSE",
-    OFILE => "CDSE",
-    NFILE => "MDSE",
-    OMARK => "wC",
-    NMARK => "wM",
-    UMARK => "",
-    OLINE => "Y",
-    NLINE => "Y",
-    ULINE => "",
-    OTEXT => $opt_256 ? "E/554" : "G",
-    NTEXT => $opt_256 ? "E/554" : "G",
-    UTEXT => "",
+my %colormap =
+    $opt_256 ? (
+	OCOMMAND => "010SE",
+	NCOMMAND => "010SE",
+	OFILE => "010DSE",
+	NFILE => "010DSE",
+	OMARK => "010/444",
+	NMARK => "010/444",
+	UMARK => "",
+	OLINE => "220",
+	NLINE => "220",
+	ULINE => "",
+	OTEXT => "E/454",
+	NTEXT => "E/454",
+	UTEXT => "",
+    ) : (
+	OCOMMAND => "GSE",
+	NCOMMAND => "GSE",
+	OFILE => "GDSE",
+	NFILE => "GDSE",
+	OMARK => "wG",
+	NMARK => "wG",
+	UMARK => "",
+	OLINE => "Y",
+	NLINE => "Y",
+	ULINE => "",
+	OTEXT => "G",
+	NTEXT => "G",
+	UTEXT => "",
     );
 
 my $colorize;
@@ -1101,18 +1116,18 @@ for right column.
 
 Defaults are :
 
-    OCOMMAND => "CSE"
-    NCOMMAND => "MSE"
-    OFILE    => "CDSE"
-    NFILE    => "MDSE"
-    OMARK    => "Cw"
-    NMARK    => "Mw"
-    UMARK    => "w"
-    OLINE    => "Y"
-    NLINE    => "Y"
-    ULINE    => "Y"
-    OTEXT    => "E/554" or "C"
-    NTEXT    => "E/554" or "M"
+    OCOMMAND => "010SE"   or "GSE"
+    NCOMMAND => "010SE"   or "GSE"
+    OFILE    => "010DSE"  or "GDSE"
+    NFILE    => "010DSE"  or "GDSE"
+    OMARK    => "010/444" or "wG"
+    NMARK    => "010/444" or "wG"
+    UMARK    => ""
+    OLINE    => "220"     or "Y"
+    NLINE    => "220"     or "Y"
+    ULINE    => ""
+    OTEXT    => "E/454"   or "G"
+    NTEXT    => "E/454"   or "G"
     UTEXT    => ""
 
 This is equivalent to :
