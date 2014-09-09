@@ -5,7 +5,8 @@ use strict;
 use warnings;
 use utf8;
 use Carp;
-use List::Util qw(min max reduce);
+use List::Util qw(min max reduce sum);
+use Getopt::Long;
 use Pod::Usage;
 use Text::ParseWords qw(shellwords);
 use Term::ANSIColor qw(:constants);
@@ -95,6 +96,8 @@ my $opt_digit = 4;
 my $opt_view;
 my $screen_width;
 my $column_width;
+my $column_width2;
+my $column_width3;
 
 my $opt_color = 1;
 my $opt_256 = 1;
@@ -154,31 +157,37 @@ my %colormap =
     $opt_256 ? (
 	OCOMMAND => "555/010E",
 	NCOMMAND => "555/010E",
+	MCOMMAND => "555/010E",
 	OFILE => "555/010DE",
 	NFILE => "555/010DE",
+	MFILE => "555/010DE",
 	OMARK => "010/444",
 	NMARK => "010/444",
+	MMARK => "010/444",
 	UMARK => "",
 	OLINE => "220",
 	NLINE => "220",
+	MLINE => "220",
 	ULINE => "",
 	OTEXT => "KE/454",
 	NTEXT => "KE/454",
+	MTEXT => "KE/454",
 	UTEXT => "",
     ) : (
 	OCOMMAND => "GSE",
 	NCOMMAND => "GSE",
+	MCOMMAND => "GSE",
 	OFILE => "GDSE",
 	NFILE => "GDSE",
+	MFILE => "GDSE",
 	OMARK => "wG",
 	NMARK => "wG",
+	MMARK => "wG",
 	UMARK => "",
 	OLINE => "Y",
 	NLINE => "Y",
+	MLINE => "Y",
 	ULINE => "",
-	OTEXT => "G",
-	NTEXT => "G",
-	UTEXT => "",
     );
 
 my $colorize;
@@ -244,15 +253,15 @@ use constant {
     NO => 'no',
 };
 my %markpos = (
-    center => [ RIGHT, LEFT  ],
-    side   => [ LEFT,  RIGHT ],
-    right  => [ RIGHT, RIGHT ],
-    left   => [ LEFT,  LEFT  ],
-    no     => [ NO,    NO    ],
+    center => [ RIGHT , LEFT  , LEFT  ],
+    side   => [ LEFT  , RIGHT , LEFT  ],
+    right  => [ RIGHT , RIGHT , RIGHT ],
+    left   => [ LEFT  , LEFT  , LEFT  ],
+    no     => [ NO    , NO    , NO    ],
     );
-my($omarkpos, $nmarkpos);
+my($omarkpos, $nmarkpos, $mmarkpos);
 if (my $pos = $markpos{$opt_mark}) {
-    ($omarkpos, $nmarkpos) = @$pos;
+    ($omarkpos, $nmarkpos, $mmarkpos) = @$pos;
 } else {
     my @keys = sort keys %markpos;
     usage "Use one from (@keys) for option --mark\n\n"
@@ -261,10 +270,12 @@ if (my $pos = $markpos{$opt_mark}) {
 my $num_format = "%${opt_digit}d";
 
 $screen_width = $opt_W || &terminal_width;
-$column_width = max(1, int(($screen_width - ($opt_mark ne NO ? 2 : 0)) / 2));
+$column_width2 = max(1, int(($screen_width - ($opt_mark ne NO ? 2 : 0)) / 2));
+$column_width3 = max(1, int(($screen_width - ($opt_mark ne NO ? 3 : 0)) / 3));
 
 my $oline = 1;
 my $nline = 1;
+my $mline = 1;
 
 if ($opt_colortable) {
     color_table();
@@ -325,6 +336,7 @@ while (<DIFF>) {
     if (($left, $ctrl, $right) = /^([\d,]+)([adc])([\d,]+)$/) {
 	my($l1, $l2) = range($left);
 	my($r1, $r2) = range($right);
+	$column_width = $column_width2;
 	if ($readfile) {
 	    my $identical_line = $l1 - $oline + 1 - ($ctrl ne 'a');
 	    print_identical($identical_line);
@@ -353,9 +365,11 @@ while (<DIFF>) {
     #
     elsif (/^\*\*\* /) {
 	my $next = <DIFF>;
-	print_command($column_width, $_, $next, type => 'FILE');
+	$column_width = $column_width2;
+	print_command({ type => 'FILE' }, $column_width, $_, $next);
     }
     elsif ($_ eq "***************\n") {
+	$column_width = $column_width2;
 	my $ohead = $_ = <DIFF>;
 	unless (($left) = /^\*\*\* ([\d,]+) \*\*\*\*$/) {
 	    print;
@@ -394,16 +408,43 @@ while (<DIFF>) {
     #
     elsif (/^--- /) {
 	my $next = <DIFF>;
-	print_command($column_width, $_, $next, type => 'FILE');
+	$column_width = $column_width2;
+	print_command({ type => 'FILE' }, $column_width, $_, $next);
     }
     elsif (/^\@\@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? \@\@/) {
 	($oline, $nline) = ($1, $3);
 	my($a, $b) = ($2//1, $4//1);
-	print_command($column_width, $_, $_, type => 'COMMAND');
+	$column_width = $column_width2;
+	print_command({ type => 'COMMAND' }, $column_width, $_, $_);
 
 	my @buf = read_diffu(*DIFF, $a, $b);
 	map { map { s/^.// } @$_ } @buf;
 	flush_buffer(@buf);
+    }
+    #
+    # diff --combined (only support 3 files)
+    #
+    elsif (/^\@\@\@ -(\d+)(?:,(\d+))? -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? \@\@\@/)  {
+
+	$column_width = $column_width3;
+	print_command({ type => 'COMMAND' }, $column_width, $_, $_, $_);
+
+	($oline, $nline, $mline) = ($1, $3, $5);
+	my @buf = read_diffu3(*DIFF, $2 // 1, $4 // 1, $6 // 1);
+	my @keys = diffu3_keys();
+	my %buf;
+
+	my @b;
+	while (@buf{@keys} = splice @buf, 0, scalar @keys) {
+	    my $com = $buf{'  '};
+	    my $old = join '', @buf{grep /^(?:--|- |\ \+)/, @keys};
+	    my $new = join '', @buf{grep /^(?:--| -|\+\ )/, @keys};
+	    my $mrg = join '', @buf{grep /\+/,  @keys};
+	    for ($com, $old, $new, $mrg) {
+		push @b, [ /(.*\n|.+)/g ];
+	    }
+	}
+	flush_buffer_3(@b);
     }
     else {
 	print;
@@ -448,6 +489,41 @@ sub read_diffu {
 	push @{$buf[$i]}, $_;
     }
     map { $_ // [] } @buf;
+}
+
+my @keys3;
+my %slot3;
+my %line3;
+BEGIN {
+    @keys3 = ("  ", "--", "- ", "+ ", " -", " +", "++");
+    @slot3{@keys3} = 0 .. @keys3 - 1;
+    %line3 = ("  " => 3,
+	      "--" => 2, "+ " => 2, " +" => 2,
+	      "++" => 1, "- " => 1, " -" => 1);
+}
+sub diffu3_keys { @keys3 }
+sub read_diffu3 {
+    my $FH = shift;
+    my $line = sum @_;
+
+    my $i = 0;
+    my @buf;
+    while (<$FH>) {
+	# `git diff' produces message like this:
+	# "\ No newline at end of file"
+	/^[ \-\+]{2}/ or do {
+	    warn "Unexpected line: $_" unless /^\\ /;
+	    next;
+	};
+	my $mark = substr $_, 0, 2;
+	if (($i % @keys3) != $slot3{$mark}) {
+	    $i += ($slot3{$mark} - $i % @keys3) % @keys3;
+	}
+	$buf[$i] .= $_;
+	last if ($line -= $line3{$mark}) <= 0;
+    }
+    push @buf, "" while @buf % @keys3;
+    map { $_ // "" } @buf;
 }
 
 sub merge_diffc {
@@ -505,9 +581,8 @@ sub flush_buffer {
     }
 
     while (my($s, $o, $n) = splice(@_, 0, 3)) {
-
 	for (@$s) {
-	    print_column($column_width, $_, ' ', ' ', $_);
+	    print_column(2, $column_width, ' ', $_, ' ', $_);
 	    $oline++;
 	    $nline++;
 	}
@@ -518,10 +593,55 @@ sub flush_buffer {
 	    my $omark = $old ? $omark : ' ';
 	    my $nmark = $new ? $nmark : ' ';
 
-	    print_column($column_width, $old, $omark, $nmark, $new);
+	    print_column(2, $column_width, $omark, $old, $nmark, $new);
 
 	    $oline++ if defined $old;
 	    $nline++ if defined $new;
+	}
+    }
+}
+
+sub flush_buffer_3 {
+
+    my($omark, $nmark, $mmark) = qw(< > >);
+
+    push @_, [] while @_ % 4;
+
+    if ($opt_view) {
+	@_ = map { @$_ }
+	reduce {
+	    [ [] ,
+	      [ map { @$_ } $a->[1], $b->[0], $b->[1] ] ,
+	      [ map { @$_ } $a->[2], $b->[0], $b->[2] ] ,
+	      [ map { @$_ } $a->[3], $b->[0], $b->[3] ]
+	    ] }
+	map { $_ ? [ ( splice @_, 0, 4) ] : [ [], [], [], [] ] }
+	0 .. @_ / 4;
+	($omark, $nmark, $mmark) = (' ', ' ', ' ');
+    }
+
+    while (@_) {
+	my @d = splice(@_, 0, 4);
+	for (@{shift @d}) {
+	    print_column(3, $column_width, ' ', $_, ' ', $_, ' ', $_);
+	    $oline++;
+	    $nline++;
+	    $mline++;
+	}
+
+	while (grep { @$_ > 0 } @d) {
+	    my $old = shift @{$d[0]};
+	    my $new = shift @{$d[1]};
+	    my $mrg = shift @{$d[2]};
+	    my $om = $old ? $omark : ' ';
+	    my $nm = $new ? $nmark : ' ';
+	    my $mm = $mrg ? $mmark : ' ';
+
+	    print_column(3, $column_width, $om, $old, $nm, $new, $mm, $mrg);
+
+	    $oline++ if defined $old;
+	    $nline++ if defined $new;
+	    $mline++ if defined $mrg;
 	}
     }
 }
@@ -536,10 +656,11 @@ sub print_identical {
 	    print linenum($oline), " " if $opt_n;
 	    print expand_tab($old);
 	} else {
-	    print_column($column_width, $old, ' ', ' ', $new);
+	    print_column(2, $column_width, ' ', $old, ' ', $new);
 	}
 	$oline++;
 	$nline++;
+	$mline++;
     }
 }
 
@@ -549,10 +670,11 @@ sub linenum {
 }
 
 sub print_column {
-    my($width, $old, $omark, $nmark, $new, $noline) = @_;
-    my $print_number = ($opt_n and not $noline);
+    my $column = shift;
+    my($width, $omark, $old, $nmark, $new, $mmark, $mrg) = @_;
+    my $print_number = $opt_n;
 
-    my($onum, $nnum) = ('', '');
+    my($onum, $nnum, $mnum) = ('', '', '');
     my $nspace = $print_number ? ' ' : '';
     if (defined $old) {
 	chomp $old;
@@ -564,18 +686,28 @@ sub print_column {
 	$new = expand_tab($new);
 	$nnum = linenum($nline) if $print_number;
     }
+    if (defined $mrg) {
+	chomp $mrg;
+	$mrg = expand_tab($mrg);
+	$mnum = linenum($mline) if $print_number;
+    }
 
     my($OTEXT, $OLINE, $OMARK) =
 	$omark =~ /\S/ ? qw(OTEXT OLINE OMARK) : qw(UTEXT OULINE OUMARK);
     my($NTEXT, $NLINE, $NMARK) =
 	$nmark =~ /\S/ ? qw(NTEXT NLINE NMARK) : qw(UTEXT NULINE NUMARK);
+    my($MTEXT, $MLINE, $MMARK) =
+	$mmark =~ /\S/ ? qw(MTEXT MLINE MMARK) : qw(UTEXT NULINE NUMARK)
+	if $column >= 3;
 
     $omark =~ s/\S/>/ if $omarkpos eq LEFT;
     $omark =~ s/\S/</ if $omarkpos eq RIGHT;
     $nmark =~ s/\S/>/ if $nmarkpos eq LEFT;
     $nmark =~ s/\S/</ if $nmarkpos eq RIGHT;
-
-    my $expand_right = $colormap{NTEXT} =~ /E/ || $nmarkpos eq RIGHT;
+    if ($column >= 3) {
+	$mmark =~ s/\S/>/ if $mmarkpos eq LEFT;
+	$mmark =~ s/\S/</ if $mmarkpos eq RIGHT;
+    }
 
     while (1) {
 	(my $o, $old) = fold($old,
@@ -584,6 +716,10 @@ sub print_column {
 	(my $n, $new) = fold($new,
 			     max(1, $width - length($nnum . $nspace)),
 			     onword => $opt_onword, pad => 1);
+	(my $m, $mrg) = fold($mrg,
+			     max(1, $width - length($mnum . $nspace)),
+			     onword => $opt_onword, pad => 1)
+	    if $column >= 3;
 
 	my %f;
 	$f{OMARK} = $colorize->($OMARK, $omark);
@@ -592,57 +728,69 @@ sub print_column {
 	$f{NMARK} = $colorize->($NMARK, $nmark);
 	$f{NLINE} = $colorize->($NLINE, $nnum) . $nspace if $print_number;
 	$f{NTEXT} = $colorize->($NTEXT, $n) if $n ne "";
+	if ($column >= 3) {
+	    $f{MMARK} = $colorize->($MMARK, $mmark);
+	    $f{MLINE} = $colorize->($MLINE, $mnum) . $nspace if $print_number;
+	    $f{MTEXT} = $colorize->($MTEXT, $m) if $m ne "";
+	}
 	print_fields(\%f);
 
 	last if $opt_truncate;
-	last unless $old ne '' or $new ne '';
+	last unless $old ne '' or $new ne '' or ($mrg and $mrg ne '');
 
 	if ($print_number) {
 	    $onum =~ s/./ /g;
 	    $nnum =~ s/./ /g;
+	    $mnum =~ s/./ /g if $column >= 3;
 	}
 	$omark = $old ne '' ? '.' : ' ';
 	$nmark = $new ne '' ? '.' : ' ';
+	$mmark = $mrg ne '' ? '.' : ' ' if $column >= 3;
     }
 }
 
 sub print_command {
-    my($width, $old, $new) = splice(@_, 0, 3);
-    my %opt = @_;
+    my $opt = ref $_[0] ? shift : {};
+    my($width, $old, $new, $mrg) = @_;
 
-    if (defined $old) {
-	chomp $old;
-	$old = expand_tab($old);
-    }
-    if (defined $new) {
-	chomp $new;
-	$new = expand_tab($new);
+    for ($old, $new, $mrg) {
+	if (defined $_) {
+	    chomp $_;
+	    $_ = expand_tab($_);
+	}
     }
     my($o, $ox) = fold($old, $width, pad => 1);
     my($n, $nx) = fold($new, $width, pad => 1);
+    my($m, $mx) = fold($mrg, $width, pad => 1) if defined $mrg;
 
-    my($ocolor, $ncolor) = qw(OCOMMAND NCOMMAND);
-    if ($opt{type}) {
-	$ocolor = "O" . $opt{type};
-	$ncolor = "N" . $opt{type};
+    my($ocolor, $ncolor, $mcolor) = qw(OCOMMAND NCOMMAND MCOMMAND);
+    if ($opt->{type}) {
+	$ocolor = "O" . $opt->{type};
+	$ncolor = "N" . $opt->{type};
+	$mcolor = "M" . $opt->{type};
     }
 
-    print_fields( { OMARK => " ", NMARK => " ",
-		    OTEXT => $colorize->($ocolor, $o),
-		    NTEXT => $colorize->($ncolor, $n) } );
+    my %f = (OMARK => " ", NMARK => " ",
+	     OTEXT => $colorize->($ocolor, $o),
+	     NTEXT => $colorize->($ncolor, $n)
+	);
+    if (defined $mrg) {
+	$f{MMARK} = " ";
+	$f{MTEXT} = $colorize->($mcolor, $m);
+    }
+    print_fields(\%f);
 }
 
 sub print_fields {
     my $F = shift;
     local $_;
-    $_ = $F->{OMARK} and print if $omarkpos eq LEFT;
-    $_ = $F->{OLINE} and print;
-    $_ = $F->{OTEXT} and print;
-    $_ = $F->{OMARK} and print if $omarkpos eq RIGHT;
-    $_ = $F->{NMARK} and print if $nmarkpos eq LEFT;
-    $_ = $F->{NLINE} and print;
-    $_ = $F->{NTEXT} and print;
-    $_ = $F->{NMARK} and print if $nmarkpos eq RIGHT;
+    %markpos = (O => $omarkpos, N => $nmarkpos, M => $mmarkpos);
+    for my $f (qw(O N M)) {
+	$_ = $F->{"${f}MARK"} and print if $markpos{$f} eq LEFT;
+	$_ = $F->{"${f}LINE"} and print;
+	$_ = $F->{"${f}TEXT"} and print;
+	$_ = $F->{"${f}MARK"} and print if $markpos{$f} eq RIGHT;
+    }
     print "\n";
 }
 
