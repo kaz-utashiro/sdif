@@ -75,6 +75,155 @@ diff ... | sdif
 
 =cut
 
+{
+    package LabelStack;
+
+    use strict;
+    use warnings;
+    use Carp;
+
+    sub new {
+	my $class = shift;
+	my $obj = bless {
+	    LABELS => [],
+	    COUNTS => {},
+	    LISTS  => [],
+	    OPTION => { UNIQUE => 1 },
+	}, $class;
+
+	if (@_) {
+	    $obj->option(@_);
+	}
+
+	if (my $initial_label = $obj->option('START')) {
+	    $obj->newlabel($initial_label);
+	}
+
+	$obj;
+    }
+
+    sub option {
+	my $obj = shift;
+
+	return undef if @_ < 1;
+	return $obj->{OPTION}->{+shift} if @_ == 1;
+
+	while (my($name, $value) = splice @_, 0, 2) {
+	    $obj->{OPTION}->{$name} = $value;
+	}
+    }
+
+    sub exists {
+	my $obj = shift;
+	my $label = shift;
+	$obj->{COUNTS}->{$label};
+    }
+
+    sub count {
+	my $obj = shift;
+	scalar @{$obj->{LISTS}};
+    }
+
+    sub newlabel {
+	my $obj = shift;
+	my $label = shift;
+	if ($obj->{COUNTS}->{$label}++ and $obj->option('UNIQUE')) {
+	    croak "Duplicated label: $label\n";
+	}
+	push @{$obj->{LABELS}}, $label;
+	push @{$obj->{LISTS}}, [];
+    }
+
+    sub append {
+	my $obj = shift;
+	my($label, $line) = @_;
+	if ($obj->labels == 0 or $label ne $obj->lastlabel) {
+	    $obj->newlabel($label);
+	}
+	push @{$obj->{LISTS}->[-1]}, $line;
+    }
+
+    sub labels {
+	my $obj = shift;
+	if (@_ == 0) {
+	    @{$obj->{LABELS}};
+	} else {
+	    map { @{$obj->{LABELS}[$_]} } @_;
+	}
+    }
+
+    sub lastlabel {
+	my $obj = shift;
+	$obj->{LABELS}->[-1];
+    }
+
+    sub lists {
+	my $obj = shift;
+	if (@_ == 0) {
+	    @{$obj->{LISTS}};
+	} else {
+	    map { @{$obj->{LISTS}[$_]} } @_;
+	}
+    }
+
+    sub blocks {
+	my $obj = shift;
+	map { join '', @$_ } $obj->lists;
+    }
+
+    sub listpair {
+	my $obj = shift;
+	my @labels = $obj->labels;
+	map { $labels[$_] => $obj->{LISTS}[$_] } 0 .. $#labels;
+    }
+
+    sub blockpair {
+	my $obj = shift;
+	my @labels = $obj->labels;
+	my @blocks = $obj->blocks;
+	map { $labels[$_] => $blocks[$_] } 0 .. $#labels;
+    }
+
+    sub match {
+	my $obj = shift;
+	my $label = shift;
+	my $pattern = ref $label eq 'Regexp' ? $label : qr/^\Q$label\E$/;
+	my @labels = $obj->labels;
+
+	map  { $obj->lists($_) }
+	grep { $labels[$_] =~ /$pattern/ }
+	0 .. $#labels;
+    }
+
+    sub _push {
+	my $obj = shift;
+	my($label, $data) = @_;
+	push @{$obj->{LABELS}}, $label;
+	push @{$obj->{LISTS}}, $data;
+    }
+
+    sub _pop {
+	my $obj = shift;
+	return () if $obj->count == 0;
+	(pop @{$obj->{LABELS}}, pop @{$obj->{LISTS}});
+    }
+
+    sub _unshift {
+	my $obj = shift;
+	my($label, $data) = @_;
+	unshift @{$obj->{LABELS}}, $label;
+	unshift @{$obj->{LISTS}}, $data;
+    }
+
+    sub _shift {
+	my $obj = shift;
+	return () if $obj->count == 0;
+	(shift @{$obj->{LABELS}}, shift @{$obj->{LISTS}});
+    }
+
+    1;
+}
+
 my $opt_n;
 my $opt_l;
 my $opt_s;
@@ -425,26 +574,18 @@ while (<DIFF>) {
     # diff --combined (only support 3 files)
     #
     elsif (/^\@\@\@ -(\d+)(?:,(\d+))? -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? \@\@\@/)  {
-
 	$column_width = $column_width3;
 	print_command({ type => 'COMMAND' }, $column_width, $_, $_, $_);
 
 	($oline, $nline, $mline) = ($1, $3, $5);
-	my @buf = read_diffu3(*DIFF, $2 // 1, $4 // 1, $6 // 1);
-	my @keys = diffu3_keys();
-	my %buf;
-
-	my @b;
-	while (@buf{@keys} = splice @buf, 0, scalar @keys) {
-	    my $com = $buf{'  '};
-	    my $old = join '', @buf{grep /^(?:--|- |\ \+)/, @keys};
-	    my $new = join '', @buf{grep /^(?:--| -|\+\ )/, @keys};
-	    my $mrg = join '', @buf{grep /\+/,  @keys};
-	    for ($com, $old, $new, $mrg) {
-		push @b, [ /(.*\n|.+)/g ];
-	    }
-	}
-	flush_buffer_3(@b);
+	my @stack = read_diffu3(*DIFF, $2 // 1, $4 // 1, $6 // 1);
+	my @buf = map {
+	    [ match $_ qr/^  $/ ],		# common
+	    [ match $_ qr/^(?:--|- |\ \+)/ ],	# old
+	    [ match $_ qr/^(?:--| -|\+\ )/ ],	# new
+	    [ match $_ qr/\+/ ]			# merge
+	} @stack;
+	flush_buffer_3(@buf);
     }
     else {
 	print;
@@ -491,23 +632,21 @@ sub read_diffu {
     map { $_ // [] } @buf;
 }
 
-my @keys3;
-my %slot3;
 my %line3;
 BEGIN {
-    @keys3 = ("  ", "--", "- ", "+ ", " -", " +", "++");
-    @slot3{@keys3} = 0 .. @keys3 - 1;
     %line3 = ("  " => 3,
 	      "--" => 2, "+ " => 2, " +" => 2,
 	      "++" => 1, "- " => 1, " -" => 1);
 }
-sub diffu3_keys { @keys3 }
 sub read_diffu3 {
     my $FH = shift;
     my $line = sum @_;
 
-    my $i = 0;
     my @buf;
+    my $start_label = '  ';
+    my @ls_option = (START => $start_label);
+    my $difflines = new LabelStack @ls_option;
+    my $lastmark = $start_label;
     while (<$FH>) {
 	# `git diff' produces message like this:
 	# "\ No newline at end of file"
@@ -515,15 +654,23 @@ sub read_diffu3 {
 	    warn "Unexpected line: $_" unless /^\\ /;
 	    next;
 	};
+
 	my $mark = substr $_, 0, 2;
-	if (($i % @keys3) != $slot3{$mark}) {
-	    $i += ($slot3{$mark} - $i % @keys3) % @keys3;
+
+	if ($mark ne $lastmark) {
+	    if ($difflines->exists($mark)) {
+		push @buf, $difflines;
+		$difflines = new LabelStack @ls_option;
+	    }
 	}
-	$buf[$i] .= $_;
+
+	$difflines->append($mark, $_);
+	$lastmark = $mark;
+
 	last if ($line -= $line3{$mark}) <= 0;
     }
-    push @buf, "" while @buf % @keys3;
-    map { $_ // "" } @buf;
+    push @buf, $difflines;
+    @buf;
 }
 
 sub merge_diffc {
@@ -570,13 +717,15 @@ sub flush_buffer {
     push @_, [] while @_ % 3;
 
     if ($opt_view) {
-	@_ = map { @$_ }
-	reduce {
-	    [ [] ,
-	      [ map { @$_ } $a->[1], $b->[0], $b->[1] ] ,
-	      [ map { @$_ } $a->[2], $b->[0], $b->[2] ] ] }
-	map { $_ ? [ ( splice @_, 0, 3 ) ] : [ [], [], [] ] }
-	0 .. @_ / 3 ;
+	@_ = do {
+	    map { @$_ }
+	    reduce {
+		[ [] ,
+		  [ map { @$_ } $a->[1], $b->[0], $b->[1] ] ,
+		  [ map { @$_ } $a->[2], $b->[0], $b->[2] ] ] }
+	    map { $_ ? [ ( splice @_, 0, 3 ) ] : [ [], [], [] ] }
+	    0 .. @_ / 3 ;
+	};
 	($omark, $nmark) = (' ', ' ');
     }
 
@@ -603,21 +752,19 @@ sub flush_buffer {
 
 sub flush_buffer_3 {
 
-    my($omark, $nmark, $mmark) = qw(< > >);
-
     push @_, [] while @_ % 4;
 
     if ($opt_view) {
-	@_ = map { @$_ }
-	reduce {
-	    [ [] ,
-	      [ map { @$_ } $a->[1], $b->[0], $b->[1] ] ,
-	      [ map { @$_ } $a->[2], $b->[0], $b->[2] ] ,
-	      [ map { @$_ } $a->[3], $b->[0], $b->[3] ]
-	    ] }
-	map { $_ ? [ ( splice @_, 0, 4) ] : [ [], [], [], [] ] }
-	0 .. @_ / 4;
-	($omark, $nmark, $mmark) = (' ', ' ', ' ');
+	@_ = do {
+	    map { @$_ }
+	    reduce {
+		[ [] ,
+		  [ map { @$_ } $a->[1], $b->[0], $b->[1] ] ,
+		  [ map { @$_ } $a->[2], $b->[0], $b->[2] ] ,
+		  [ map { @$_ } $a->[3], $b->[0], $b->[3] ] ] }
+	    map { $_ ? [ splice @_, 0, 4 ] : [ [], [], [], [] ] }
+	    0 .. @_ / 4;
+	};
     }
 
     while (@_) {
@@ -633,9 +780,11 @@ sub flush_buffer_3 {
 	    my $old = shift @{$d[0]};
 	    my $new = shift @{$d[1]};
 	    my $mrg = shift @{$d[2]};
-	    my $om = $old ? $omark : ' ';
-	    my $nm = $new ? $nmark : ' ';
-	    my $mm = $mrg ? $mmark : ' ';
+	    my $om = $old ? $old =~ s/^(.).// && $1  : ' ';
+	    my $nm = $new ? $new =~ s/^.(.)// && $1  : ' ';
+	    my $mm = $mrg ? $mrg =~ s/^..//   && '+' : ' ';
+
+	    $om = $nm = $mm = ' ' if $opt_view;
 
 	    print_column(3, $column_width, $om, $old, $nm, $new, $mm, $mrg);
 
@@ -700,13 +849,11 @@ sub print_column {
 	$mmark =~ /\S/ ? qw(MTEXT MLINE MMARK) : qw(UTEXT NULINE NUMARK)
 	if $column >= 3;
 
-    $omark =~ s/\S/>/ if $omarkpos eq LEFT;
-    $omark =~ s/\S/</ if $omarkpos eq RIGHT;
-    $nmark =~ s/\S/>/ if $nmarkpos eq LEFT;
-    $nmark =~ s/\S/</ if $nmarkpos eq RIGHT;
-    if ($column >= 3) {
-	$mmark =~ s/\S/>/ if $mmarkpos eq LEFT;
-	$mmark =~ s/\S/</ if $mmarkpos eq RIGHT;
+    if ($column < 3) {
+	$omark =~ s/\S/>/ if $omarkpos eq LEFT;
+	$omark =~ s/\S/</ if $omarkpos eq RIGHT;
+	$nmark =~ s/\S/>/ if $nmarkpos eq LEFT;
+	$nmark =~ s/\S/</ if $nmarkpos eq RIGHT;
     }
 
     while (1) {
