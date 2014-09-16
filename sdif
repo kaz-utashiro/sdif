@@ -190,35 +190,48 @@ diff ... | sdif
 	my $pattern = ref $label eq 'Regexp' ? $label : qr/^\Q$label\E$/;
 	my @labels = $obj->labels;
 
-	map  { $obj->lists($_) }
+	map  { $obj->{LISTS}[$_] }
 	grep { $labels[$_] =~ /$pattern/ }
 	0 .. $#labels;
     }
 
-    sub _push {
+    sub collect {
 	my $obj = shift;
+	map { @$_ } $obj->match(@_);
+    }
+
+    sub push {
+	my $obj = CORE::shift;
 	my($label, $data) = @_;
-	push @{$obj->{LABELS}}, $label;
-	push @{$obj->{LISTS}}, $data;
+	CORE::push @{$obj->{LABELS}}, $label;
+	CORE::push @{$obj->{LISTS}}, $data;
+	$obj->{COUNTS}{$label}++;
     }
 
-    sub _pop {
-	my $obj = shift;
+    sub pop {
+	my $obj = CORE::shift;
 	return () if $obj->count == 0;
-	(pop @{$obj->{LABELS}}, pop @{$obj->{LISTS}});
+	my $label = CORE::pop @{$obj->{LABELS}};
+	my $entry = CORE::pop @{$obj->{LISTS}};
+	$obj->{COUNTS}{$label}--;
+	($label, $entry);
     }
 
-    sub _unshift {
-	my $obj = shift;
+    sub unshift {
+	my $obj = CORE::shift;
 	my($label, $data) = @_;
-	unshift @{$obj->{LABELS}}, $label;
-	unshift @{$obj->{LISTS}}, $data;
+	CORE::unshift @{$obj->{LABELS}}, $label;
+	CORE::unshift @{$obj->{LISTS}}, $data;
+	$obj->{COUNTS}{$label}++;
     }
 
-    sub _shift {
-	my $obj = shift;
+    sub shift {
+	my $obj = CORE::shift;
 	return () if $obj->count == 0;
-	(shift @{$obj->{LABELS}}, shift @{$obj->{LISTS}});
+	my $label = CORE::shift @{$obj->{LABELS}};
+	my $entry = CORE::shift @{$obj->{LISTS}};
+	$obj->{COUNTS}{$label}--;
+	($label, $entry);
     }
 
     1;
@@ -566,7 +579,13 @@ while (<DIFF>) {
 	$column_width = $column_width2;
 	print_command({ type => 'COMMAND' }, $column_width, $_, $_);
 
-	my @buf = read_diffu(*DIFF, $a, $b);
+	my @stack = read_diffu(*DIFF, $a, $b);
+	my @buf = map {
+	    [ collect $_ qr/^\ $/ ],	# common
+	    [ collect $_ qr/^\-$/ ],	# old
+	    [ collect $_ qr/^\+$/ ],	# new
+	} @stack;
+
 	map { map { s/^.// } @$_ } @buf;
 	flush_buffer(@buf);
     }
@@ -578,12 +597,12 @@ while (<DIFF>) {
 	print_command({ type => 'COMMAND' }, $column_width, $_, $_, $_);
 
 	($oline, $nline, $mline) = ($1, $3, $5);
-	my @stack = read_diffu3(*DIFF, $2 // 1, $4 // 1, $6 // 1);
+	my @stack = read_diffu(*DIFF, $2 // 1, $4 // 1, $6 // 1);
 	my @buf = map {
-	    [ match $_ qr/^  $/ ],		# common
-	    [ match $_ qr/^(?:--|- |\ \+)/ ],	# old
-	    [ match $_ qr/^(?:--| -|\+\ )/ ],	# new
-	    [ match $_ qr/\+/ ]			# merge
+	    [ collect $_ qr/^  $/ ],		# common
+	    [ collect $_ qr/^(?:--|- |\ \+)/ ],	# old
+	    [ collect $_ qr/^(?:--| -|\+\ )/ ],	# new
+	    [ collect $_ qr/\+/ ]			# merge
 	} @stack;
 	flush_buffer_3(@buf);
     }
@@ -607,70 +626,34 @@ exit($exit == 2);
 
 ######################################################################
 
-my %slot;
-BEGIN {
-    %slot = (" " => 0, "\t" => 0, "-" => 1, "+" => 2);
+sub marklines {
+    local $_ = shift;
+    /-/ ? tr/-/-/ : tr/ / / + 1;
 }
 sub read_diffu {
     my $FH = shift;
-    my @l = (0, @_);
+    my $column = @_;
+    my $total = sum @_;
 
-    my $i = 0;
-    my @buf;
-    my $slot;
-    while (2 * $l[0] + $l[1] + $l[2] > 0 and $_ = <$FH>) {
-	# `git diff' produces message like this:
-	# "\ No newline at end of file"
-	/^[ \t\-\+]/ or next;
-	while (($i % 3) != ($slot = $slot{substr($_, 0, 1)})) {
-	    $i++;
-	}
-	$l[$slot]--;
-	$buf[$i] //= [];
-	push @{$buf[$i]}, $_;
-    }
-    map { $_ // [] } @buf;
-}
-
-my %line3;
-BEGIN {
-    %line3 = ("  " => 3,
-	      "--" => 2, "+ " => 2, " +" => 2,
-	      "++" => 1, "- " => 1, " -" => 1);
-}
-sub read_diffu3 {
-    my $FH = shift;
-    my $line = sum @_;
-
-    my @buf;
-    my $start_label = '  ';
-    my @ls_option = (START => $start_label);
-    my $difflines = new LabelStack @ls_option;
-    my $lastmark = $start_label;
+    my $mark_length = $column - 1;
+    my $start_label = ' ' x $mark_length;
+    my @lsopt = (START => $start_label);
+    my @stack = (new LabelStack @lsopt);
     while (<$FH>) {
 	# `git diff' produces message like this:
 	# "\ No newline at end of file"
-	/^[ \-\+]{2}/ or do {
+	/^[ \-\+]{$mark_length}/ or do {
 	    warn "Unexpected line: $_" unless /^\\ /;
 	    next;
 	};
-
-	my $mark = substr $_, 0, 2;
-
-	if ($mark ne $lastmark) {
-	    if ($difflines->exists($mark)) {
-		push @buf, $difflines;
-		$difflines = new LabelStack @ls_option;
-	    }
+	my $mark = substr $_, 0, $mark_length;
+	if ($mark ne $stack[-1]->lastlabel and $stack[-1]->exists($mark)) {
+	    push @stack, new LabelStack @lsopt;
 	}
-
-	$difflines->append($mark, $_);
-	$lastmark = $mark;
-
-	last if ($line -= $line3{$mark}) <= 0;
+	$stack[-1]->append($mark, $_);
+	last if ($total -= marklines($mark)) <= 0;
     }
-    push @buf, $difflines;
-    @buf;
+    @stack;
 }
 
 sub merge_diffc {
@@ -849,12 +832,9 @@ sub print_column {
 	$mmark =~ /\S/ ? qw(MTEXT MLINE MMARK) : qw(UTEXT NULINE NUMARK)
 	if $column >= 3;
 
-    if ($column < 3) {
-	$omark =~ s/\S/>/ if $omarkpos eq LEFT;
-	$omark =~ s/\S/</ if $omarkpos eq RIGHT;
-	$nmark =~ s/\S/>/ if $nmarkpos eq LEFT;
-	$nmark =~ s/\S/</ if $nmarkpos eq RIGHT;
-    }
+    $omark =~ s/[<>]/$omarkpos eq LEFT ? '>' : '<'/e;
+    $nmark =~ s/[<>]/$nmarkpos eq LEFT ? '>' : '<'/e;
+    $mmark =~ s/[<>]/$mmarkpos eq LEFT ? '>' : '<'/e if defined $mmark;
 
     while (1) {
 	(my $o, $old) = fold($old,
