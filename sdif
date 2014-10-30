@@ -1,28 +1,5 @@
 #!/usr/bin/perl -CSDA
 
-require 5.010;
-use strict;
-use warnings;
-use utf8;
-use Carp;
-use List::Util qw(min max reduce sum);
-use Getopt::Long;
-use Pod::Usage;
-use Text::ParseWords qw(shellwords);
-use Term::ANSIColor qw(:constants);
-use Data::Dumper;
-$Data::Dumper::Terse = 1;
-
-eval {
-    require Getopt::EX::Long;
-    import  Getopt::EX::Long;
-    1;
-} or do {
-    die if $! !~ /^No such file/;
-    require Getopt::Long;
-    import  Getopt::Long;
-};
-
 ##
 ## sdif: sdiff clone
 ##
@@ -89,6 +66,7 @@ diff ... | sdif
 	    COUNTS => {},
 	    LISTS  => [],
 	    OPTION => { UNIQUE => 1 },
+	    ATTR   => {},
 	}, $class;
 
 	if (@_) {
@@ -102,15 +80,21 @@ diff ... | sdif
 	$obj;
     }
 
-    sub option {
+    sub option { splice @_, 1, 0, 'OPTION' ; goto &__attr }
+    sub attr   { splice @_, 1, 0, 'ATTR'   ; goto &__attr }
+    sub __attr {
 	my $obj = shift;
+	my $attr_name = shift;
 
 	return undef if @_ < 1;
-	return $obj->{OPTION}->{+shift} if @_ == 1;
+	return $obj->{$attr_name}->{+shift} if @_ == 1;
 
+	my $hash = $obj->{$attr_name};
 	while (my($name, $value) = splice @_, 0, 2) {
-	    $obj->{OPTION}->{$name} = $value;
+	    $hash->{$name} = $value;
 	}
+
+	$obj;
     }
 
     sub exists {
@@ -141,6 +125,7 @@ diff ... | sdif
 	    $obj->newlabel($label);
 	}
 	push @{$obj->{LISTS}->[-1]}, $line;
+	$obj;
     }
 
     sub labels {
@@ -202,10 +187,13 @@ diff ... | sdif
 
     sub push {
 	my $obj = CORE::shift;
-	my($label, $data) = @_;
-	CORE::push @{$obj->{LABELS}}, $label;
-	CORE::push @{$obj->{LISTS}}, $data;
-	$obj->{COUNTS}{$label}++;
+	croak "Invalid argument." if @_ % 2;
+	while (my($label, $data) = splice @_, 0, 2) {
+	    CORE::push @{$obj->{LABELS}}, $label;
+	    CORE::push @{$obj->{LISTS}}, $data;
+	    $obj->{COUNTS}{$label}++;
+	}
+	$obj;
     }
 
     sub pop {
@@ -219,10 +207,13 @@ diff ... | sdif
 
     sub unshift {
 	my $obj = CORE::shift;
-	my($label, $data) = @_;
-	CORE::unshift @{$obj->{LABELS}}, $label;
-	CORE::unshift @{$obj->{LISTS}}, $data;
-	$obj->{COUNTS}{$label}++;
+	croak "Invalid argument." if @_ % 2;
+	while (my($label, $data) = splice @_, 0, 2) {
+	    CORE::unshift @{$obj->{LABELS}}, $label;
+	    CORE::unshift @{$obj->{LISTS}}, $data;
+	    $obj->{COUNTS}{$label}++;
+	}
+	$obj;
     }
 
     sub shift {
@@ -235,6 +226,38 @@ diff ... | sdif
     }
 
     1;
+}
+
+require 5.010;
+use strict;
+use warnings;
+use utf8;
+use Carp;
+use List::Util qw(min max reduce sum);
+use Pod::Usage;
+use Text::ParseWords qw(shellwords);
+use Term::ANSIColor qw(:constants);
+use Data::Dumper;
+$Data::Dumper::Terse = 1;
+
+eval {
+    require Getopt::EX::Long;
+    import  Getopt::EX::Long;
+    1;
+} or do {
+    die if $! !~ /^No such file/;
+    require Getopt::Long;
+    import  Getopt::Long;
+};
+
+sub read_until (&$) {
+    my($sub, $fh) = @_;
+    my @lines;
+    while (<$fh>) {
+	push @lines, $_;
+	return @lines if &$sub;
+    }
+    (@lines, undef);
 }
 
 my $opt_n;
@@ -421,19 +444,25 @@ my %markpos = (
     left   => [ LEFT  , LEFT  , LEFT  ],
     no     => [ NO    , NO    , NO    ],
     );
-my($omarkpos, $nmarkpos, $mmarkpos);
-if (my $pos = $markpos{$opt_mark}) {
-    ($omarkpos, $nmarkpos, $mmarkpos) = @$pos;
-} else {
+unless ($markpos{$opt_mark}) {
     my @keys = sort keys %markpos;
     usage "Use one from (@keys) for option --mark\n\n"
 }
+my @markpos = @{$markpos{$opt_mark}};
+my($omarkpos, $nmarkpos, $mmarkpos) = @markpos;
 
 my $num_format = "%${opt_digit}d";
 
 $screen_width = $opt_W || &terminal_width;
 $column_width2 = max(1, int(($screen_width - ($opt_mark ne NO ? 2 : 0)) / 2));
 $column_width3 = max(1, int(($screen_width - ($opt_mark ne NO ? 3 : 0)) / 3));
+
+sub column_width {
+    my $column = shift;
+    my $width = $screen_width;
+    $width -= $column if $opt_mark;
+    max(1, int($width / $column));
+}
 
 my $oline = 1;
 my $nline = 1;
@@ -487,6 +516,8 @@ use constant {
     DIFF_C => 2,
     DIFF_U => 3,
 };
+
+my $column = 2;
 
 while (<DIFF>) {
     my @old;
@@ -570,7 +601,7 @@ while (<DIFF>) {
     #
     elsif (/^--- /) {
 	my $next = <DIFF>;
-	$column_width = $column_width2;
+	$column_width = $column == 3 ? $column_width3 : $column_width2;
 	print_command({ type => 'FILE' }, $column_width, $_, $next);
     }
     elsif (/^\@\@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? \@\@/) {
@@ -592,9 +623,20 @@ while (<DIFF>) {
     #
     # diff --combined (only support 3 files)
     #
-    elsif (/^\@\@\@ -(\d+)(?:,(\d+))? -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? \@\@\@/)  {
+    elsif (/^diff --(?:cc|combined)/) {
+	my @lines = ($_);
+	push @lines, read_until { /^\+\+\+/ } *DIFF;
+	if (not defined $lines[-1]) {
+	    pop @lines;
+	    print @lines;
+	    next;
+	}
+	print @lines;
+    }
+    elsif (/^\@{3} -(\d+)(?:,(\d+))? -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? \@{3}/)  {
 	$column_width = $column_width3;
-	print_command({ type => 'COMMAND' }, $column_width, $_, $_, $_);
+#	print_command({ type => 'COMMAND' }, $column_width, $_, $_, $_);
+	print_command_n({ type => 'COMMAND' }, $_, $_, $_);
 
 	($oline, $nline, $mline) = ($1, $3, $5);
 	my @stack = read_diffu(*DIFF, $2 // 1, $4 // 1, $6 // 1);
@@ -602,7 +644,7 @@ while (<DIFF>) {
 	    [ collect $_ qr/^  $/ ],		# common
 	    [ collect $_ qr/^(?:--|- |\ \+)/ ],	# old
 	    [ collect $_ qr/^(?:--| -|\+\ )/ ],	# new
-	    [ collect $_ qr/\+/ ]			# merge
+	    [ collect $_ qr/\+/ ]		# merge
 	} @stack;
 	flush_buffer_3(@buf);
     }
@@ -695,7 +737,7 @@ sub merge_diffc {
 
 sub flush_buffer {
 
-    my($omark, $nmark) = qw(< >);
+    my($omark, $nmark) = ('-', '+');
 
     push @_, [] while @_ % 3;
 
@@ -714,7 +756,7 @@ sub flush_buffer {
 
     while (my($s, $o, $n) = splice(@_, 0, 3)) {
 	for (@$s) {
-	    print_column(2, $column_width, ' ', $_, ' ', $_);
+	    print_column($column_width, ' ', $_, ' ', $_);
 	    $oline++;
 	    $nline++;
 	}
@@ -725,7 +767,7 @@ sub flush_buffer {
 	    my $omark = $old ? $omark : ' ';
 	    my $nmark = $new ? $nmark : ' ';
 
-	    print_column(2, $column_width, $omark, $old, $nmark, $new);
+	    print_column($column_width, $omark, $old, $nmark, $new);
 
 	    $oline++ if defined $old;
 	    $nline++ if defined $new;
@@ -753,7 +795,7 @@ sub flush_buffer_3 {
     while (@_) {
 	my @d = splice(@_, 0, 4);
 	for (@{shift @d}) {
-	    print_column(3, $column_width, ' ', $_, ' ', $_, ' ', $_);
+	    print_column($column_width, ' ', $_, ' ', $_, ' ', $_);
 	    $oline++;
 	    $nline++;
 	    $mline++;
@@ -769,7 +811,7 @@ sub flush_buffer_3 {
 
 	    $om = $nm = $mm = ' ' if $opt_view;
 
-	    print_column(3, $column_width, $om, $old, $nm, $new, $mm, $mrg);
+	    print_column($column_width, $om, $old, $nm, $new, $mm, $mrg);
 
 	    $oline++ if defined $old;
 	    $nline++ if defined $new;
@@ -788,7 +830,7 @@ sub print_identical {
 	    print linenum($oline), " " if $opt_n;
 	    print expand_tab($old);
 	} else {
-	    print_column(2, $column_width, ' ', $old, ' ', $new);
+	    print_column($column_width, ' ', $old, ' ', $new);
 	}
 	$oline++;
 	$nline++;
@@ -802,8 +844,9 @@ sub linenum {
 }
 
 sub print_column {
-    my $column = shift;
-    my($width, $omark, $old, $nmark, $new, $mmark, $mrg) = @_;
+    my $width = shift;
+    my $column = @_ / 2;
+    my($omark, $old, $nmark, $new, $mmark, $mrg) = @_;
     my $print_number = $opt_n;
 
     my($onum, $nnum, $mnum) = ('', '', '');
@@ -831,10 +874,6 @@ sub print_column {
     my($MTEXT, $MLINE, $MMARK) =
 	$mmark =~ /\S/ ? qw(MTEXT MLINE MMARK) : qw(UTEXT NULINE NUMARK)
 	if $column >= 3;
-
-    $omark =~ s/[<>]/$omarkpos eq LEFT ? '>' : '<'/e;
-    $nmark =~ s/[<>]/$nmarkpos eq LEFT ? '>' : '<'/e;
-    $mmark =~ s/[<>]/$mmarkpos eq LEFT ? '>' : '<'/e if defined $mmark;
 
     while (1) {
 	(my $o, $old) = fold($old,
@@ -917,6 +956,44 @@ sub print_fields {
 	$_ = $F->{"${f}LINE"} and print;
 	$_ = $F->{"${f}TEXT"} and print;
 	$_ = $F->{"${f}MARK"} and print if $markpos{$f} eq RIGHT;
+    }
+    print "\n";
+}
+
+sub print_command_n {
+    my $opt = ref $_[0] ? shift : {};
+    my $column = @_;
+    my $width = column_width($column);
+    my @f;
+
+    $opt->{type} //= 'COMMAND';
+    my @color = map { $_ . $opt->{type} } "O", "N", "M";
+
+    for my $i (0 .. $#_) {
+	local $_ = $_[$i];
+	if (defined $_) {
+	    chomp $_;
+	    $_ = expand_tab($_);
+	}
+	($_) = fold($_, $width, pad => 1);
+	my %f;
+	my $color = $i < @color ? $color[$i] : $color[-1];
+	$f{TEXT} = $colorize->($color, $_);
+	$f{MARK} = ' ';
+	push @f, \%f;
+    }
+
+    print_field_n(@f);
+}
+
+sub print_field_n {
+    for my $i (0 .. $#_) {
+	my $f = $_[$i];
+	my $markpos = $i < @markpos ? $markpos[$i] : $markpos[-1];
+	$_ = $f->{"MARK"} and print if $markpos eq LEFT;
+	$_ = $f->{"LINE"} and print;
+	$_ = $f->{"TEXT"} and print;
+	$_ = $f->{"MARK"} and print if $markpos eq RIGHT;
     }
     print "\n";
 }
