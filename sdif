@@ -6,12 +6,21 @@ use warnings;
 use utf8;
 use Carp;
 use List::Util qw(min max reduce);
-use Getopt::Long;
 use Pod::Usage;
 use Text::ParseWords qw(shellwords);
 use Term::ANSIColor qw(:constants);
 use Data::Dumper;
 $Data::Dumper::Terse = 1;
+
+eval {
+    require Getopt::EX::Long;
+    import  Getopt::EX::Long;
+    1;
+} or do {
+    die if $! !~ /^No such file/;
+    require Getopt::Long;
+    import  Getopt::Long;
+};
 
 ##
 ## sdif: sdiff clone
