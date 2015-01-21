@@ -16,7 +16,7 @@ $Data::Dumper::Terse = 1;
 ##
 ## sdif: sdiff clone
 ##
-## Copyright (c) 1992-2014 Kazumasa Utashiro
+## Copyright (c) 1992-2015 Kazumasa Utashiro
 ##
 ## Original version on Jul 24 1991
 ##
@@ -143,18 +143,18 @@ warn "\@ARGV = (@SAVEDARGV)\n" if $opt_d;
 
 my %colormap =
     $opt_256 ? (
-	OCOMMAND => "010SE",
-	NCOMMAND => "010SE",
-	OFILE => "010DSE",
-	NFILE => "010DSE",
+	OCOMMAND => "555/010E",
+	NCOMMAND => "555/010E",
+	OFILE => "555/010DE",
+	NFILE => "555/010DE",
 	OMARK => "010/444",
 	NMARK => "010/444",
 	UMARK => "",
 	OLINE => "220",
 	NLINE => "220",
 	ULINE => "",
-	OTEXT => "E/454",
-	NTEXT => "E/454",
+	OTEXT => "KE/454",
+	NTEXT => "KE/454",
 	UTEXT => "",
     ) : (
 	OCOMMAND => "GSE",
