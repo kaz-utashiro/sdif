@@ -38,14 +38,14 @@ sub brightness {
     my $do = "background color of first window";
     my $bg = qx{osascript -e \'tell application \"$app\" to $do\'};
     my($r, $g, $b) = $bg =~ /(\d+)/g;
-    ($r * 30 + $g * 59 + $b * 11) / 65535 / 100;
+    int(($r * 30 + $g * 59 + $b * 11) / 65535); # 0 .. 100
 }
 
 sub initialize {
     my $bucket = shift;
     $bucket->setopt(
 	default =>
-	brightness > 0.5 ? '--LIGHT_SCREEN' : '--DARK_SCREEN');
+	brightness > 50 ? '--LIGHT_SCREEN' : '--DARK_SCREEN');
 }
 
 1;
