@@ -21,6 +21,10 @@ otherwise set B<--DARK_SCREEN> option.
 Because these options are not defined in this module, user have to
 define them somewhere.
 
+If the environment variable C<BRIGHTNESS> is defined, its value is
+used as a brightness rather than caliculated from terminal color.  The
+value of C<BRIGHTNESS> is in a range of 0 to 100.
+
 =head1 SEE ALSO
 
 L<App::sdif::colors>
@@ -42,8 +46,8 @@ sub brightness {
 }
 
 sub initialize {
-    my $bucket = shift;
-    $bucket->setopt(
+    my $rc = shift;
+    $rc->setopt(
 	default =>
 	brightness > 50 ? '--LIGHT_SCREEN' : '--DARK_SCREEN');
 }
