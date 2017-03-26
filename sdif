@@ -372,6 +372,10 @@ my %colormap =
 	NLINE => "Y",
 	MLINE => "Y",
 	ULINE => "",
+	OTEXT => "G",
+	NTEXT => "G",
+	MTEXT => "G",
+	UTEXT => "",
     );
 
 my $colorize;
