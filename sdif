@@ -3,7 +3,7 @@
 ##
 ## sdif: sdiff clone
 ##
-## Copyright (c) 1992-2015 Kazumasa Utashiro
+## Copyright (c) 1992-2017 Kazumasa Utashiro
 ##
 ## Original version on Jul 24 1991
 ##
@@ -1246,17 +1246,18 @@ feature of sdif is making a side-by-side listing of two different
 files.  All contents of two files are listed on left and right sides.
 Center column is used to indicate how different those lines.  No mark
 means no difference.  Added, deleted and modified lines are marked
-with `<' and `>' character.
+with `-' and `+' character.
 
-    1 deleted  <
+    1 deleted  -
     2 same          1 same
-    3 changed  <>   2 modified
+    3 changed  -+   2 modified
     4 same          3 same
-                >   4 added
+                +   4 added
 
 It also reads and formats the output from B<diff> command from
 standard input.  Besides normal diff output, context diff I<-c> and
-unified diff I<-u> output will be handled properly.
+unified diff I<-u> output will be handled properly.  Combined diff
+format is also supported, but currently limited upto three files.
 
 Each lines can be displayed in different colors.  Read B<--colormap>
 section in ths manual for detail.
@@ -1355,13 +1356,13 @@ Basic I<colormap> format is :
 
 where the FIELD is one from these :
 
-    OLD       NEW       UNCHANGED
-    --------- --------- ---------
-    OCOMMAND  NCOMMAND           : Command line
-    OFILE     NFILE              : File name
-    OMARK     NMARK     UMARK    : Mark
-    OLINE     NLINE     ULINE    : Line number
-    OTEXT     NTEXT     UTEXT    : Text
+    OLD       NEW       MERGED    UNCHANGED
+    --------- --------- --------- ---------
+    OCOMMAND  NCOMMAND  MCOMMAND           : Command line
+    OFILE     NFILE     MFILE              : File name
+    OMARK     NMARK     MMARK     UMARK    : Mark
+    OLINE     NLINE     MLINE     ULINE    : Line number
+    OTEXT     NTEXT     MTEXT     UTEXT    : Text
 
 If UMARK and/or ULINE is empty, OMARK/NMARK and/or OLINE/NLINE are
 used instead.
@@ -1428,25 +1429,31 @@ for right column.
 
 Defaults are :
 
-    OCOMMAND => "010SE"   or "GSE"
-    NCOMMAND => "010SE"   or "GSE"
-    OFILE    => "010DSE"  or "GDSE"
-    NFILE    => "010DSE"  or "GDSE"
-    OMARK    => "010/444" or "wG"
-    NMARK    => "010/444" or "wG"
+    OCOMMAND => "555/010E"  or "GSE"
+    NCOMMAND => "555/010E"  or "GSE"
+    MCOMMAND => "555/010E"  or "GSE"
+    OFILE    => "555/010DE" or "GSDE"
+    NFILE    => "555/010DE" or "GSDE"
+    MFILE    => "555/010DE" or "GSDE"
+    OMARK    => "010/444"   or "wG"
+    NMARK    => "010/444"   or "wG"
+    MMARK    => "010/444"   or "wG"
     UMARK    => ""
-    OLINE    => "220"     or "Y"
-    NLINE    => "220"     or "Y"
+    OLINE    => "220"       or  "Y"
+    NLINE    => "220"       or  "Y"
+    MLINE    => "220"       or  "Y"
     ULINE    => ""
-    OTEXT    => "E/454"   or "G"
-    NTEXT    => "E/454"   or "G"
+    OTEXT    => "KE/454"    or "G"
+    NTEXT    => "KE/454"    or "G"
+    MTEXT    => "KE/454"    or "G"
     UTEXT    => ""
 
 This is equivalent to :
 
-    sdif --cm 'OCOMMAND=CSE,NCOMMAND=MSE,OFILE=CDE,NFILE=MDE' \
-         --cm 'OMARK=Cw,NMARK=Mw,UMARK=w' \
-         --cm '*LINE=Y,[ON]TEXT=E/554,UTEXT='
+    sdif --cm '?COMMAND=555/010E,?FILE=555/010DE' \
+         --cm '?MARK=010/444,UMARK=' \
+         --cm '?LINE=220,ULINE=' \
+         --cm '?TEXT=KE/454,UTEXT='
 
 =back
 

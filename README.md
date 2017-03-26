@@ -78,110 +78,111 @@ diff ... | sdif
 
 # DESCRIPTION
 
-__sdif__ is inspired by System V [sdiff(1)](http://man.he.net/man1/sdiff) command.  The basic
+**sdif** is inspired by System V [sdiff(1)](http://man.he.net/man1/sdiff) command.  The basic
 feature of sdif is making a side-by-side listing of two different
 files.  All contents of two files are listed on left and right sides.
 Center column is used to indicate how different those lines.  No mark
 means no difference.  Added, deleted and modified lines are marked
-with \`<' and \`>' character.
+with \`-' and \`+' character.
 
-    1 deleted  <
+    1 deleted  -
     2 same          1 same
-    3 changed  <>   2 modified
+    3 changed  -+   2 modified
     4 same          3 same
-                >   4 added
+                +   4 added
 
-It also reads and formats the output from __diff__ command from
+It also reads and formats the output from **diff** command from
 standard input.  Besides normal diff output, context diff _-c_ and
-unified diff _-u_ output will be handled properly.
+unified diff _-u_ output will be handled properly.  Combined diff
+format is also supported, but currently limited upto three files.
 
-Each lines can be displayed in different colors.  Read __--colormap__
+Each lines can be displayed in different colors.  Read **--colormap**
 section in ths manual for detail.
 
-While __sdif__ doesn't care about the contents of each modified lines,
-it can read the output from __cdif__ command which show the word
-context differences of each lines.  Option __--cdif__ set the
-appropriate options for __cdif__.  Set _--nocc_, _--nomc_ options at
-least when invoking __cdif__ manually.  Option _--notc_ is pereferable
-because text color can be handled by __sdif__.
+While **sdif** doesn't care about the contents of each modified lines,
+it can read the output from **cdif** command which show the word
+context differences of each lines.  Option **--cdif** set the
+appropriate options for **cdif**.  Set _--nocc_, _--nomc_ options at
+least when invoking **cdif** manually.  Option _--notc_ is pereferable
+because text color can be handled by **sdif**.
 
-Environment valuable __SDIFOPTS__ is used to set default options.
+Environment valuable **SDIFOPTS** is used to set default options.
 
 # OPTIONS
 
-- __--width__=_width_, __-W__ _width_
+- **--width**=_width_, **-W** _width_
 
     Use width as a width of output listing.  Default width is 80.  If the
     standard error is assinged to a terminal, the width is taken from it
     if possible.
 
-- __--number__, __-n__
+- **--number**, **-n**
 
     Print line number on each lines.
 
-- __--digit__=_n_
+- **--digit**=_n_
 
     Line number is diplayed in 4 digits by dafult.  Use this option to
     change it.
 
-- __-c__, __-C___n_, __-u__, __-U___n_
+- **-c**, **-C**_n_, **-u**, **-U**_n_
 
     Passed through to the back-end diff command.  Sdif can interpret the
     output from normal, context (_diff -c_) and unified diff (_diff
     \-u_).
 
-- __--truncate__, __-t__
+- **--truncate**, **-t**
 
     Truncate lines if they are longer than printing width.
 
-- __--onword__
+- **--onword**
 
     Fold longs line at word boundaries.
 
-- __--cdif__
+- **--cdif**
 
-    Use __cdif__ command instead of normal diff command.
+    Use **cdif** command instead of normal diff command.
 
-- __--cdifopts__=_option_
+- **--cdifopts**=_option_
 
-    Specify options for backend __cdif__ command.
+    Specify options for backend **cdif** command.
 
-- __--mecab__
+- **--mecab**
 
-    Pass __--mecab__ option to backend __cdif__ command.  Use __--cdifopts__
+    Pass **--mecab** option to backend **cdif** command.  Use **--cdifopts**
     to set other options.
 
-- __--diff__=_command_
+- **--diff**=_command_
 
     Any command can be specified as a diff command to be used.  Piping
-    output to __sdif__ is easier unless you want to get whole text.
+    output to **sdif** is easier unless you want to get whole text.
 
-- __--diffopts__=_option_
+- **--diffopts**=_option_
 
-    Specify options for backend __diff__ command.
+    Specify options for backend **diff** command.
 
-- __--mark__=_position_
+- **--mark**=_position_
 
     Specify the position for mark.  Choose from _left_, _right_,
     _center_, _side_ or _no_.  Default is _center_.
 
-- __--__\[__no__\]__color__
+- **--**\[**no**\]**color**
 
     Use ANSI color escape sequence for output.  Default is true.
 
-- __--__\[__no__\]__256__
+- **--**\[**no**\]**256**
 
     Use ANSI 256 color mode.  Default is true.
 
-- __--colortable__
+- **--colortable**
 
     Show table of ANSI 216 colors.
 
-- __--view__, __-v__
+- **--view**, **-v**
 
     Viewer mode.  Display two files side-by-side in straightforward order.
 
-- __--colormap__=_colormap_, __--cm__=_colormap_
+- **--colormap**=_colormap_, **--cm**=_colormap_
 
     Basic _colormap_ format is :
 
@@ -189,13 +190,13 @@ Environment valuable __SDIFOPTS__ is used to set default options.
 
     where the FIELD is one from these :
 
-        OLD       NEW       UNCHANGED
-        --------- --------- ---------
-        OCOMMAND  NCOMMAND           : Command line
-        OFILE     NFILE              : File name
-        OMARK     NMARK     UMARK    : Mark
-        OLINE     NLINE     ULINE    : Line number
-        OTEXT     NTEXT     UTEXT    : Text
+        OLD       NEW       MERGED    UNCHANGED
+        --------- --------- --------- ---------
+        OCOMMAND  NCOMMAND  MCOMMAND           : Command line
+        OFILE     NFILE     MFILE              : File name
+        OMARK     NMARK     MMARK     UMARK    : Mark
+        OLINE     NLINE     MLINE     ULINE    : Line number
+        OTEXT     NTEXT     MTEXT     UTEXT    : Text
 
     If UMARK and/or ULINE is empty, OMARK/NMARK and/or OLINE/NLINE are
     used instead.
@@ -255,32 +256,38 @@ Environment valuable __SDIFOPTS__ is used to set default options.
         F  Flash (blink)
         E  Expand
 
-    __E__ is effective for command, file and text line.  That line will be
+    **E** is effective for command, file and text line.  That line will be
     expanded to window width filling up by space characters.  Left column
     is expanded always.  You may want to use this to set background color
     for right column.
 
     Defaults are :
 
-        OCOMMAND => "CSE"
-        NCOMMAND => "MSE"
-        OFILE    => "CDSE"
-        NFILE    => "MDSE"
-        OMARK    => "Cw"
-        NMARK    => "Mw"
-        UMARK    => "w"
-        OLINE    => "Y"
-        NLINE    => "Y"
-        ULINE    => "Y"
-        OTEXT    => "E/554" or "C"
-        NTEXT    => "E/554" or "M"
+        OCOMMAND => "555/010E"  or "GSE"
+        NCOMMAND => "555/010E"  or "GSE"
+        MCOMMAND => "555/010E"  or "GSE"
+        OFILE    => "555/010DE" or "GSDE"
+        NFILE    => "555/010DE" or "GSDE"
+        MFILE    => "555/010DE" or "GSDE"
+        OMARK    => "010/444"   or "wG"
+        NMARK    => "010/444"   or "wG"
+        MMARK    => "010/444"   or "wG"
+        UMARK    => ""
+        OLINE    => "220"       or  "Y"
+        NLINE    => "220"       or  "Y"
+        MLINE    => "220"       or  "Y"
+        ULINE    => ""
+        OTEXT    => "KE/454"    or "G"
+        NTEXT    => "KE/454"    or "G"
+        MTEXT    => "KE/454"    or "G"
         UTEXT    => ""
 
     This is equivalent to :
 
-        sdif --cm 'OCOMMAND=CSE,NCOMMAND=MSE,OFILE=CDE,NFILE=MDE' \
-             --cm 'OMARK=Cw,NMARK=Mw,UMARK=w' \
-             --cm '*LINE=Y,[ON]TEXT=E/554,UTEXT='
+        sdif --cm '?COMMAND=555/010E,?FILE=555/010DE' \
+             --cm '?MARK=010/444,UMARK=' \
+             --cm '?LINE=220,ULINE=' \
+             --cm '?TEXT=KE/454,UTEXT='
 
 # AUTHOR
 
