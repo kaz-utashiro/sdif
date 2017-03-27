@@ -229,11 +229,12 @@ Environment valuable **SDIFOPTS** is used to set default options.
         K  Black
         W  White
 
-    and corresponding lowercase background color :
+    and alternative (usually brighter) colors in lowercase :
 
         r, g, b, c, m, y, k, w
 
-    or RGB value if using ANSI 256 color terminal :
+    or RGB values and 24 grey levels if using ANSI 256 or full color
+    terminal :
 
         FORMAT:
             foreground[/background]
@@ -241,6 +242,7 @@ Environment valuable **SDIFOPTS** is used to set default options.
         COLOR:
             000 .. 555       : 6 x 6 x 6 216 colors
             000000 .. FFFFFF : 24bit RGB mapped to 216 colors
+            L00 .. L23       : 24 grey levels
 
         Sample:
             005     0000FF        : blue foreground
@@ -269,9 +271,9 @@ Environment valuable **SDIFOPTS** is used to set default options.
         OFILE    => "555/010DE" or "GSDE"
         NFILE    => "555/010DE" or "GSDE"
         MFILE    => "555/010DE" or "GSDE"
-        OMARK    => "010/444"   or "wG"
-        NMARK    => "010/444"   or "wG"
-        MMARK    => "010/444"   or "wG"
+        OMARK    => "010/444"   or "G/W"
+        NMARK    => "010/444"   or "G/W"
+        MMARK    => "010/444"   or "G/W"
         UMARK    => ""
         OLINE    => "220"       or  "Y"
         NLINE    => "220"       or  "Y"

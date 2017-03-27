@@ -228,6 +228,146 @@ diff ... | sdif
     1;
 }
 
+{
+
+##
+## Temporally borrowed from Getopt::EX::Colormap
+##
+package ANSIColor;
+
+use strict;
+use warnings;
+use Carp;
+
+our $COLOR_RGB24 = 0;
+
+sub ansi256_number {
+    my $code = shift;
+    my($r, $g, $b, $grey);
+    if ($code =~ /^([0-5])([0-5])([0-5])$/) {
+	($r, $g, $b) = ($1, $2, $3);
+    }
+    elsif ($code =~ /^L(\d+)/i) {
+	$1 > 23 and die "Color spec error: $code";
+	$grey = 0 + $1;
+    }
+    elsif ($code =~ /^([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i) {
+	my($rx, $gx, $bx) = map { hex } $1, $2, $3;
+	if ($rx != 255 and $rx == $gx and $rx == $bx) {
+	    ##
+	    ## Divide area into 25 segments, and map to BLACK and 24 GREYS
+	    ##
+	    $grey = int ( $rx * 25 / 255 ) - 1;
+	    if ($grey < 0) {
+		$r = $g = $b = 0;
+		$grey = undef;
+	    }
+	} else {
+	    $r = int ( 5 * $rx / 255 );
+	    $g = int ( 5 * $gx / 255 );
+	    $b = int ( 5 * $bx / 255 );
+	}
+    }
+    else {
+	die "Color spec error: $code";
+    }
+    defined $grey ? ($grey + 232) : ($r*36 + $g*6 + $b + 16);
+}
+
+my %numbers = (
+    ';' => undef,	# ; : NOP
+    E => undef,		# E : NOP
+    X => undef,		# X : NOP
+    N => undef,		# N : None (NOP)
+    Z => 0,		# Z : Zero (Reset)
+    D => 1,		# D : Double-Struck (Bold)
+    P => 2,		# P : Pale (Dark)
+    I => 3,		# I : Italic
+    U => 4,		# U : Underline
+    F => 5,		# F : Flash (Blink)
+    S => 7,		# S : Standout (Reverse)
+    V => 8,		# V : Vanish (Concealed)
+    K => 30, k => 90,	# K : Kuro (Black)
+    R => 31, r => 91,	# R : Red  
+    G => 32, g => 92,	# G : Green
+    Y => 33, y => 93,	# Y : Yellow
+    B => 34, b => 94,	# B : Blue 
+    M => 35, m => 95,	# M : Magenta
+    C => 36, c => 96,	# C : Cyan 
+    W => 37, w => 97,	# W : White
+    );
+
+sub ansi_numbers {
+    local $_ = shift // '';
+    my @numbers;
+    my $BG = 0;
+    while (m{\G
+	     (?:
+	       (?<slash> /)				# /
+	     | (?<h24>  [0-9a-f]{6} )			# 24bit hex
+	     | (?<c256> [0-5][0-5][0-5]			# 216 (6x6x6) colors
+		      | L(?:[01][0-9]|[2][0-3]) )	# 24 grey levels
+	     | (?<c16>  [KRGYBMCW] )			# 16 colors
+	     | (?<efct> [;EXNZDPIUFSV] )		# effects
+	     | (?<err>  .+ )				# error
+	     )
+	    }xig) {
+	if ($+{slash}) {
+	    $BG++ and die "Color spec error: $_";
+	}
+	elsif (my $h24 = $+{h24}) {
+	    if ($COLOR_RGB24) {
+		push @numbers, ($BG ? 48 : 38), 2, do {
+		    map { hex $_ }
+		    $h24 =~ /^([\da-f]{2})([\da-f]{2})([\da-f]{2})/i
+		};
+	    } else {
+		push @numbers, ($BG ? 48 : 38), 5, ansi256_number $h24;
+	    }
+	}
+	elsif (my $c256 = $+{c256}) {
+	    push @numbers, ($BG ? 48 : 38), 5, ansi256_number $c256;
+	}
+	elsif (my $c16 = $+{c16}) {
+	    push @numbers, $numbers{$c16} + ($BG ? 10 : 0);
+	}
+	elsif (my $efct = $+{efct}) {
+	    $efct = uc $efct;
+	    push @numbers, $numbers{$efct} if defined $numbers{$efct};
+	}
+	elsif (my $err = $+{err}) {
+	    die "Color spec error: \"$err\" in \"$_\""
+	}
+	else { die }
+	
+    }
+    @numbers;
+}
+
+sub CSI {
+    @_  ? "\e[" . ( join ';', @_ ) . 'm'
+	: ''
+}
+
+sub ansi_indicator {
+    my $spec = shift;
+    my @numbers = ansi_numbers $spec;
+    @numbers ? CSI @numbers : undef;
+}
+
+sub ansi_pair {
+    my $spec = shift;
+    my $start = ansi_indicator $spec;
+    my $end = CSI 0 if $start;
+    ($start // '', $end // '');
+}
+
+}
+
+use constant RESET => ANSIColor::CSI(0);
+
+######################################################################
+
 require 5.010;
 use strict;
 use warnings;
@@ -236,7 +376,6 @@ use Carp;
 use List::Util qw(min max reduce sum);
 use Pod::Usage;
 use Text::ParseWords qw(shellwords);
-use Term::ANSIColor qw(:constants);
 use Data::Dumper;
 $Data::Dumper::Terse = 1;
 
@@ -364,9 +503,9 @@ my %colormap =
 	OFILE => "GDSE",
 	NFILE => "GDSE",
 	MFILE => "GDSE",
-	OMARK => "wG",
-	NMARK => "wG",
-	MMARK => "wG",
+	OMARK => "G/W",
+	NMARK => "G/W",
+	MMARK => "G/W",
 	UMARK => "",
 	OLINE => "Y",
 	NLINE => "Y",
@@ -1135,74 +1274,18 @@ sub unesc {
     $_;
 }
 
-use constant { FG => 'fg', BG => 'bg' } ;
-
-sub colorseq {
-    my $colormode = shift;
-
-    my($start, $end) = ('', '');
-    if ($colormode =~ /,/) {
-	($start, $end) = split(/,/, $colormode, 2);
-    } else {
-	map {
-	    if (s/\/((?i:[\da-f]{6})|[0-5][0-5][0-5])// and $opt_256) {
-		$start .= ansi256($1, BG);
-	    }
-	    if (s/((?i:[\da-f]{6})|[0-5][0-5][0-5])// and $opt_256) {
-		$start .= ansi256($1, FG);
-	    }
-	    $start .= UNDERLINE if /U/;
-	    $start .= REVERSE   if /S/;
-	    $start .= BOLD      if /D/;
-	    $start .= BLINK     if /F/;
-	    $start .= RED       if /R/; $start .= ON_RED       if /r/;
-	    $start .= GREEN     if /G/; $start .= ON_GREEN     if /g/;
-	    $start .= BLUE      if /B/; $start .= ON_BLUE      if /b/;
-	    $start .= CYAN      if /C/; $start .= ON_CYAN      if /c/;
-	    $start .= MAGENTA   if /M/; $start .= ON_MAGENTA   if /m/;
-	    $start .= YELLOW    if /Y/; $start .= ON_YELLOW    if /y/;
-	    $start .= BLACK     if /K/; $start .= ON_BLACK     if /k/;
-	    $start .= WHITE     if /W/; $start .= ON_WHITE     if /w/;
-	} $colormode if $colormode;
-	$end = RESET if $start;
-	$start =~ s/m\e\[/;/g;
-    }
-    ($start, $end);
-}
-
-sub ansi256 {
-    my($code, $fg_or_bg) = @_;
-    my($r, $g, $b);
-    if ($code =~ /^([0-5])([0-5])([0-5])$/) {
-	($r, $g, $b) = ($1, $2, $3);
-    }
-    elsif ($code =~ /^([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i) {
-	$r = int(5 * hex($1) / 255);
-	$g = int(5 * hex($2) / 255);
-	$b = int(5 * hex($3) / 255);
-    }
-    else {
-	croak "Color format error.\n";
-    }
-    sprintf("\e[%d;%d;%dm",
-	    $fg_or_bg eq BG ? 48 : 38,
-	    5,
-	    16 + ($r * 36) + ($g * 6) + $b
-	);
-}
-
 my %colorcache;
 
 sub color {
     my($color, $text) = @_;
     return $text unless $color;
-    unless ($colorcache{$color}) {
+    my $pair = $colorcache{$color} //= do {
 	my $mode = exists $colormap{$color} ? $colormap{$color} : $color;
-	$colorcache{$color} = [ colorseq($mode) ];
-    }
-    my($s, $e) = @{$colorcache{$color}};
+	[ ANSIColor::ansi_pair($mode) ];
+    };
+    my($s, $e) = @$pair;
     if ($s ne "") {
-	$text =~ s/(^|$reset_re)([^\e\r\n]+)/$1$s$2$e/mg;
+	$text =~ s/(^|$reset_re)([^\e\r\n]+)/${1}${s}${2}${e}/mg;
     }
     $text;
 }
@@ -1232,6 +1315,18 @@ sub color_table {
 	    }
 	    print "\n";
 	}
+    }
+    for my $g (0..23) {
+	my $grey = sprintf "L%02d", $g;
+	print color("$grey/$grey", " $grey");
+    }
+    print "\n";
+    for my $alt (0, 1) {
+	for my $C (split //, "RGBCMYKW") {
+	    my $c = $alt ? lc $C : $C;
+	    print color("$c/$c", "  $c ");
+	}
+	print "\n";
     }
 }
 
@@ -1395,11 +1490,12 @@ foreground color :
     K  Black
     W  White
 
-and corresponding lowercase background color :
+and alternative (usually brighter) colors in lowercase :
 
     r, g, b, c, m, y, k, w
 
-or RGB value if using ANSI 256 color terminal :
+or RGB values and 24 grey levels if using ANSI 256 or full color
+terminal :
 
     FORMAT:
         foreground[/background]
@@ -1407,6 +1503,7 @@ or RGB value if using ANSI 256 color terminal :
     COLOR:
         000 .. 555       : 6 x 6 x 6 216 colors
         000000 .. FFFFFF : 24bit RGB mapped to 216 colors
+        L00 .. L23       : 24 grey levels
 
     Sample:
         005     0000FF        : blue foreground
@@ -1435,9 +1532,9 @@ Defaults are :
     OFILE    => "555/010DE" or "GSDE"
     NFILE    => "555/010DE" or "GSDE"
     MFILE    => "555/010DE" or "GSDE"
-    OMARK    => "010/444"   or "wG"
-    NMARK    => "010/444"   or "wG"
-    MMARK    => "010/444"   or "wG"
+    OMARK    => "010/444"   or "G/W"
+    NMARK    => "010/444"   or "G/W"
+    MMARK    => "010/444"   or "G/W"
     UMARK    => ""
     OLINE    => "220"       or  "Y"
     NLINE    => "220"       or  "Y"

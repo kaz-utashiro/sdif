@@ -37,12 +37,12 @@ option	--green \
 	--cdifopts '--cm :CDIF'
 
 option	--dark_green \
-	--cm ?COMMAND=444/010;E		\
-	--cm    ?FILE=444/010;ED	\
-	--cm    ?MARK=444/111		\
+	--cm ?COMMAND=555/121;E		\
+	--cm    ?FILE=555/121;ED	\
+	--cm    ?MARK=333/L05		\
 	--cm    UMARK=			\
 	--cm    ?LINE=220		\
-	--cm    ?TEXT=555/121		\
+	--cm    ?TEXT=555/L03		\
 	--cm    UTEXT=444		\
 	--cdifopts '--cm :DARK_CDIF'
 
@@ -68,12 +68,11 @@ option	--dark_cmy \
 	--cm MCOMMAND=555/110;E		\
 	--cm    OFILE=555/011;ED	\
 	--cm    NFILE=555/202;ED	\
-	--cm    MFILE=555/K;ED	\
-	--cm    ?MARK=555/110		\
-	--cm    ?MARK=000/333		\
+	--cm    MFILE=555/K;ED		\
+	--cm    ?MARK=333/L05		\
 	--cm    UMARK=			\
 	--cm    ?LINE=110		\
-	--cm    ?TEXT=555/111;E		\
+	--cm    ?TEXT=555/L03;E		\
 	--cm    UTEXT=			\
 	--cdifopts '--cm :DARK_CDIF'
 
@@ -83,9 +82,9 @@ option	--mono \
 	--cm    ?MARK=000/333	\
 	--cm    UMARK=		\
 	--cm    ?LINE=222	\
-	--cm    ?TEXT=000/444	\
+	--cm    ?TEXT=000/L23	\
 	--cm    UTEXT=111	\
-	--cdifopts '--cm APPEND=DELETE=555/222,*CHANGE=000/333'
+	--cdifopts '--cm APPEND=DELETE=555/333,*CHANGE=000/444'
 
 option	--dark_mono \
 	--cm ?COMMAND=333;SE	\
@@ -93,6 +92,6 @@ option	--dark_mono \
 	--cm    ?MARK=000/333	\
 	--cm    UMARK=		\
 	--cm    ?LINE=333	\
-	--cm    ?TEXT=555/111	\
+	--cm    ?TEXT=555/L03	\
 	--cm    UTEXT=444	\
-	--cdifopts '--cm APPEND=DELETE=555/222,*CHANGE=000/333'
+	--cdifopts '--cm APPEND=DELETE=555/111,*CHANGE=000/222'
