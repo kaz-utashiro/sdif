@@ -651,13 +651,6 @@ if ($opt_cdif) {
     open(DIFF, $DIFF) || die "cannot open diff: $!\n";
 }
 
-use constant {
-    DIFF_UNDEF => 0,
-    DIFF_N => 1,
-    DIFF_C => 2,
-    DIFF_U => 3,
-};
-
 my $column = 2;
 
 while (<DIFF>) {
