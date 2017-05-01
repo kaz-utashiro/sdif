@@ -1321,6 +1321,10 @@ sub color_table {
 	}
 	print "\n";
     }
+    for my $rgb (qw(500 050 005 055 505 550 000 555)) {
+	print color("$rgb/$rgb", " $rgb");
+    }
+    print "\n";
 }
 
 __END__
