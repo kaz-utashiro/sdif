@@ -1100,9 +1100,6 @@ BEGIN {
     $control_re = qr{ \e \] [\;\:\/0-9a-z]* \e \\ }x;
 }
 
-sub posi { $_[0] =~ s/^/+/mgr }
-sub nega { $_[0] =~ s/^/-/mgr }
-
 sub IsWideSpacing {
     return <<"END";
 ${wide_props_posi}
@@ -1211,10 +1208,10 @@ sub simple_fold {
 
     my $w = vwidth($s1);
     while ($w > $width) {
-	$s1 =~ s/(?:(\p{IsWideSpacing})|(\p{IsNarrowSpacing})) \p{Mn}* \z//xp
-	    or croak "unexpected matching";
+	my $trim = int(($w - $width) / 2 + 0.5) || 1;
+	$s1 =~ s/\X \K \X{$trim} \z//xp or last;
 	$s2 = ${^MATCH} . $s2;
-	$w -= defined $1 ? 2 : 1;
+	$w -= vwidth(${^MATCH});
     }
 
     ($s1, $s2);
