@@ -1081,20 +1081,41 @@ sub print_field_n {
     print "\n";
 }
 
-my $wchars;
+my($wide_props, $wide_props_posi, $wide_props_nega);
 my $alphanum;
 my $reset_re;
 my $color_re;
 my $control_re;
 BEGIN {
-    my $wide      = '\p{East_Asian_Width=Wide}';
-    my $fullwidth = '\p{East_Asian_Width=FullWidth}';
-    my $ambiguous = '\p{East_Asian_Width=Ambiguous}';
-    $wchars = "${wide}${fullwidth}";
+    my $wide      = "utf8::East_Asian_Width=Wide";
+    my $fullwidth = "utf8::East_Asian_Width=FullWidth";
+    my $ambiguous = "utf8::East_Asian_Width=Ambiguous";
+    $wide_props  = "${wide}\n${fullwidth}";
+    $wide_props .= "\n${ambiguous}" if 0; # XXX hard coded
+    $wide_props_posi = $wide_props =~ s/^/+/mgr;
+    $wide_props_nega = $wide_props =~ s/^/-/mgr;
     $alphanum = '_\d\p{Latin}';
     $reset_re = qr/\e\[[0;]*m/;
     $color_re = qr{ \e \[ [\d;]* m }x;
     $control_re = qr{ \e \] [\;\:\/0-9a-z]* \e \\ }x;
+}
+
+sub posi { $_[0] =~ s/^/+/mgr }
+sub nega { $_[0] =~ s/^/-/mgr }
+
+sub IsWideSpacing {
+    return <<"END";
+${wide_props_posi}
+-utf8::Nonspacing_Mark
+END
+}
+
+sub IsNarrowSpacing {
+    return <<"END";
++utf8::All
+${wide_props_nega}
+-utf8::Nonspacing_Mark
+END
 }
 
 sub fold {
@@ -1120,7 +1141,7 @@ sub fold {
 	}
 
 	last if $room < 1;
-	last if $room != $width and /^[$wchars]/o and $room < 2;
+	last if $room != $width and /^\p{IsWideSpacing}/ and $room < 2;
 
 	if (s/^($color_re)//) {
 	    $folded .= $1;
@@ -1130,13 +1151,13 @@ sub fold {
 
 	if (s/^(\e*[^\e]+)//) {
 	    my $s = $1;
-	    if ((my $w = mbwidth($s)) <= $room) {
+	    if ((my $w = vwidth($s)) <= $room) {
 		$folded .= $s;
 		$room -= $w;
 		next;
 	    }
 	    my($a, $b) = simple_fold($s, $room);
-	    my $w = mbwidth($a);
+	    my $w = vwidth($a);
 	    if ($w > $room and $room < $width) {
 		$_ = $s . $_;
 		last;
@@ -1179,22 +1200,18 @@ sub fold {
 }
 
 ##
-## Trim off one or more characters from the top.
+## Trim off one or more *logical* characters from the top.
 ##
 sub simple_fold {
     local $_ = shift;
     my $width = shift;
     $width <= 0 and croak "parameter error";
-    ##
-    ## This process seems to be inefficient, but \X matches visually
-    ## multiple characters in some language, such as Thai.
-    ## c.f. http://docstore.mik.ua/orelly/perl4/cook/ch01_09.htm
-    ##
+
     my $len = 0;
-    while (/\G(\X)/g) {
-	my $w = mbwidth($1);
+    while (m{\G (?:(\p{IsNarrowSpacing})|(\p{IsWideSpacing})) \p{Mn}*}xgp) {
+	my $w = defined $1 ? 1 : 2;
 	last if $width < $w and $len > 0;
-	$len += length($1);
+	$len += length ${^MATCH};
 	$width -= $w;
 	last if $width <= 0;
     }
@@ -1238,19 +1255,14 @@ sub pwidth {
 	1 while s/[^\010]\010//;
 	s/^\010+//;
     }
-    mbwidth($_);
+    vwidth($_);
 }
 
-sub mbwidth {
-    my $arg = shift;
+sub vwidth {
+    local $_ = shift;
     my $len = 0;
-    while ($arg =~ m{
-	( (?: (?![$wchars]) \P{Mn} ) + )
-	|
-	( (?: (?=[$wchars]) \P{Mn} ) + )
-    }xgo) {
-	$len += defined $1 ? length($1) : length($2) * 2;
-    }
+    $len ++   while m/\p{IsNarrowSpacing}/gp;
+    $len += 2 while m/\p{IsWideSpacing}/gp;
     $len;
 }
 
