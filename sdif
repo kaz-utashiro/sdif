@@ -1309,6 +1309,11 @@ sub color_table {
 	    print "\n";
 	}
     }
+    for my $g (0..5) {
+	my $grey = $g x 3;
+	print color("$grey/$grey", sprintf(" %-19s", $grey));
+    }
+    print "\n";
     for my $g (0..23) {
 	my $grey = sprintf "L%02d", $g;
 	print color("$grey/$grey", " $grey");
