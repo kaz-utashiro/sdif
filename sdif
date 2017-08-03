@@ -1,4 +1,4 @@
-#!/usr/bin/perl -CSDA
+#!/usr/bin/env perl
 
 ##
 ## sdif: sdiff clone
@@ -372,6 +372,7 @@ require 5.010;
 use strict;
 use warnings;
 use utf8;
+use open IO => ':utf8';
 use Carp;
 use List::Util qw(min max reduce sum);
 use Pod::Usage;
@@ -427,6 +428,10 @@ my $opt_256 = 1;
 my $opt_mark = "center";
 my $opt_W;
 my $opt_colortable;
+
+binmode STDIN,  ":encoding(utf8)";
+binmode STDOUT, ":encoding(utf8)";
+binmode STDERR, ":encoding(utf8)";
 
 ##
 ## Special treatment --noenv option.
