@@ -1203,19 +1203,21 @@ sub fold {
 ## Trim off one or more *logical* characters from the top.
 ##
 sub simple_fold {
-    local $_ = shift;
+    my $orig = shift;
     my $width = shift;
     $width <= 0 and croak "parameter error";
 
-    my $len = 0;
-    while (m{\G (?:(\p{IsNarrowSpacing})|(\p{IsWideSpacing})) \p{Mn}*}xgp) {
-	my $w = defined $1 ? 1 : 2;
-	last if $width < $w and $len > 0;
-	$len += length ${^MATCH};
-	$width -= $w;
-	last if $width <= 0;
+    my($s1, $s2) = $orig =~ m/^(\X{0,$width})(.*)/ or die;
+
+    my $w = vwidth($s1);
+    while ($w > $width) {
+	$s1 =~ s/(?:(\p{IsWideSpacing})|(\p{IsNarrowSpacing})) \p{Mn}* \z//xp
+	    or croak "unexpected matching";
+	$s2 = ${^MATCH} . $s2;
+	$w -= defined $1 ? 2 : 1;
     }
-    (substr($_, 0, $len), substr($_, $len));
+
+    ($s1, $s2);
 }
 
 sub read_line {
