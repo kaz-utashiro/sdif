@@ -1370,16 +1370,16 @@ with `-' and `+' character.
 It also reads and formats the output from B<diff> command from
 standard input.  Besides normal diff output, context diff I<-c> and
 unified diff I<-u> output will be handled properly.  Combined diff
-format is also supported, but currently limited upto three files.
+format is also supported, but currently limited up to three files.
 
 Each lines can be displayed in different colors.  Read B<--colormap>
-section in ths manual for detail.
+section in this manual for detail.
 
 While B<sdif> doesn't care about the contents of each modified lines,
 it can read the output from B<cdif> command which show the word
 context differences of each lines.  Option B<--cdif> set the
 appropriate options for B<cdif>.  Set I<--nocc>, I<--nomc> options at
-least when invoking B<cdif> manually.  Option I<--notc> is pereferable
+least when invoking B<cdif> manually.  Option I<--notc> is preferable
 because text color can be handled by B<sdif>.
 
 Environment valuable B<SDIFOPTS> is used to set default options.
@@ -1392,7 +1392,7 @@ Environment valuable B<SDIFOPTS> is used to set default options.
 =item B<--width>=I<width>, B<-W> I<width>
 
 Use width as a width of output listing.  Default width is 80.  If the
-standard error is assinged to a terminal, the width is taken from it
+standard error is assigned to a terminal, the width is taken from it
 if possible.
 
 =item B<--number>, B<-n>
@@ -1401,7 +1401,7 @@ Print line number on each lines.
 
 =item B<--digit>=I<n>
 
-Line number is diplayed in 4 digits by dafult.  Use this option to
+Line number is displayed in 4 digits by default.  Use this option to
 change it.
 
 =item B<-c>, B<-C>I<n>, B<-u>, B<-U>I<n>
@@ -1416,7 +1416,7 @@ Truncate lines if they are longer than printing width.
 
 =item B<--onword>
 
-Fold longs line at word boundaries.
+Fold long line at word boundaries.
 
 =item B<--cdif>
 
@@ -1424,11 +1424,11 @@ Use B<cdif> command instead of normal diff command.
 
 =item B<--cdifopts>=I<option>
 
-Specify options for backend B<cdif> command.
+Specify options for back-end B<cdif> command.
 
 =item B<--mecab>
 
-Pass B<--mecab> option to backend B<cdif> command.  Use B<--cdifopts>
+Pass B<--mecab> option to back-end B<cdif> command.  Use B<--cdifopts>
 to set other options.
 
 =item B<--diff>=I<command>
@@ -1438,11 +1438,11 @@ output to B<sdif> is easier unless you want to get whole text.
 
 =item B<--diffopts>=I<option>
 
-Specify options for backend B<diff> command.
+Specify options for back-end B<diff> command.
 
 =item B<--mark>=I<position>
 
-Specify the position for mark.  Choose from I<left>, I<right>,
+Specify the position for a mark.  Choose from I<left>, I<right>,
 I<center>, I<side> or I<no>.  Default is I<center>.
 
 =item B<-->[B<no>]B<color>
@@ -1480,7 +1480,7 @@ where the FIELD is one from these :
 If UMARK and/or ULINE is empty, OMARK/NMARK and/or OLINE/NLINE are
 used instead.
 
-You can make multiple filelds same color joining them by = :
+You can make multiple fields same color joining them by = :
 
     FIELD1=FIELD2=...=COLOR
 
@@ -1496,7 +1496,7 @@ or combined with comma (,) :
 
     --cm FILED1=COLOR1,FIELD2=COLOR2, ...
 
-COLOR is combination of single character representing uppercase
+COLOR is a combination of single character representing uppercase
 foreground color :
 
     R  Red
@@ -1531,7 +1531,7 @@ terminal :
 
 and other effects :
 
-    S  Standout (reverse video)
+    S  Stand-out (reverse video)
     U  Underline
     D  Double-struck (boldface)
     F  Flash (blink)
