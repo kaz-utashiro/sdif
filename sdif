@@ -1265,8 +1265,8 @@ sub pwidth {
 sub vwidth {
     local $_ = shift;
     my $len = 0;
-    $len ++   while m/\p{IsNarrowSpacing}/gp;
-    $len += 2 while m/\p{IsWideSpacing}/gp;
+    $len ++   while m/\p{IsNarrowSpacing}/g;
+    $len += 2 while m/\p{IsWideSpacing}/g;
     $len;
 }
 
