@@ -1158,8 +1158,7 @@ sub fold {
 		$room -= $w;
 		next;
 	    }
-	    my($a, $b) = simple_fold($s, $room);
-	    my $w = vwidth($a);
+	    my($a, $b, $w) = simple_fold($s, $room);
 	    if ($w > $room and $room < $width) {
 		$_ = $s . $_;
 		last;
@@ -1214,12 +1213,12 @@ sub simple_fold {
     my $w = vwidth($s1);
     while ($w > $width) {
 	my $trim = int(($w - $width) / 2 + 0.5) || 1;
-	$s1 =~ s/\X \K \X{$trim} \z//xp or last;
-	$s2 = ${^MATCH} . $s2;
-	$w -= vwidth(${^MATCH});
+	$s1 =~ s/\X \K ( \X{$trim} ) \z//x or last;
+	$s2 = $1 . $s2;
+	$w -= vwidth($1);
     }
 
-    ($s1, $s2);
+    ($s1, $s2, $w);
 }
 
 sub read_line {
