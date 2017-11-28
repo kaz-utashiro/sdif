@@ -1132,6 +1132,11 @@ sub fold {
     my @color_stack;
     while (length) {
 
+	if (s/^([\f\r]+)//) {
+	    $folded .= $1;
+	    $room = $width;
+	    next;
+	}
 	if (s/^($control_re)//) {
 	    $folded .= $1;
 	    next;
@@ -1151,7 +1156,7 @@ sub fold {
 	    next;
 	}
 
-	if (s/^(\e*[^\e]+)//) {
+	if (s/^(\e*[^\e\f\r]+)//) {
 	    my $s = $1;
 	    if ((my $w = vwidth($s)) <= $room) {
 		$folded .= $s;
