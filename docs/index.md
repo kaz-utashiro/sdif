@@ -94,16 +94,16 @@ with \`-' and \`+' character.
 It also reads and formats the output from **diff** command from
 standard input.  Besides normal diff output, context diff _-c_ and
 unified diff _-u_ output will be handled properly.  Combined diff
-format is also supported, but currently limited upto three files.
+format is also supported, but currently limited up to three files.
 
 Each lines can be displayed in different colors.  Read **--colormap**
-section in ths manual for detail.
+section in this manual for detail.
 
 While **sdif** doesn't care about the contents of each modified lines,
 it can read the output from **cdif** command which show the word
 context differences of each lines.  Option **--cdif** set the
 appropriate options for **cdif**.  Set _--nocc_, _--nomc_ options at
-least when invoking **cdif** manually.  Option _--notc_ is pereferable
+least when invoking **cdif** manually.  Option _--notc_ is preferable
 because text color can be handled by **sdif**.
 
 Environment valuable **SDIFOPTS** is used to set default options.
@@ -113,7 +113,7 @@ Environment valuable **SDIFOPTS** is used to set default options.
 - **--width**=_width_, **-W** _width_
 
     Use width as a width of output listing.  Default width is 80.  If the
-    standard error is assinged to a terminal, the width is taken from it
+    standard error is assigned to a terminal, the width is taken from it
     if possible.
 
 - **--number**, **-n**
@@ -122,7 +122,7 @@ Environment valuable **SDIFOPTS** is used to set default options.
 
 - **--digit**=_n_
 
-    Line number is diplayed in 4 digits by dafult.  Use this option to
+    Line number is displayed in 4 digits by default.  Use this option to
     change it.
 
 - **-c**, **-C**_n_, **-u**, **-U**_n_
@@ -137,7 +137,7 @@ Environment valuable **SDIFOPTS** is used to set default options.
 
 - **--onword**
 
-    Fold longs line at word boundaries.
+    Fold long line at word boundaries.
 
 - **--cdif**
 
@@ -145,11 +145,11 @@ Environment valuable **SDIFOPTS** is used to set default options.
 
 - **--cdifopts**=_option_
 
-    Specify options for backend **cdif** command.
+    Specify options for back-end **cdif** command.
 
 - **--mecab**
 
-    Pass **--mecab** option to backend **cdif** command.  Use **--cdifopts**
+    Pass **--mecab** option to back-end **cdif** command.  Use **--cdifopts**
     to set other options.
 
 - **--diff**=_command_
@@ -159,11 +159,11 @@ Environment valuable **SDIFOPTS** is used to set default options.
 
 - **--diffopts**=_option_
 
-    Specify options for backend **diff** command.
+    Specify options for back-end **diff** command.
 
 - **--mark**=_position_
 
-    Specify the position for mark.  Choose from _left_, _right_,
+    Specify the position for a mark.  Choose from _left_, _right_,
     _center_, _side_ or _no_.  Default is _center_.
 
 - **--**\[**no**\]**color**
@@ -201,7 +201,7 @@ Environment valuable **SDIFOPTS** is used to set default options.
     If UMARK and/or ULINE is empty, OMARK/NMARK and/or OLINE/NLINE are
     used instead.
 
-    You can make multiple filelds same color joining them by = :
+    You can make multiple fields same color joining them by = :
 
         FIELD1=FIELD2=...=COLOR
 
@@ -217,7 +217,7 @@ Environment valuable **SDIFOPTS** is used to set default options.
 
         --cm FILED1=COLOR1,FIELD2=COLOR2, ...
 
-    COLOR is combination of single character representing uppercase
+    COLOR is a combination of single character representing uppercase
     foreground color :
 
         R  Red
@@ -252,7 +252,7 @@ Environment valuable **SDIFOPTS** is used to set default options.
 
     and other effects :
 
-        S  Standout (reverse video)
+        S  Stand-out (reverse video)
         U  Underline
         D  Double-struck (boldface)
         F  Flash (blink)
